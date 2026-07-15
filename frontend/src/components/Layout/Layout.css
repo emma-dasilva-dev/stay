@@ -1,0 +1,257 @@
+.app-shell {
+  min-height: 100vh;
+  background: #d8d4ce;
+  padding: 32px;
+  font-family: Arial, sans-serif;
+}
+
+.site-canvas {
+  position: relative;
+  min-height: calc(100vh - 64px);
+  background: #f3f1ee;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+}
+
+.site-header {
+  position: absolute;
+  top: 40px;
+  left: 48px;
+  right: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  z-index: 30;
+}
+
+.menu-button {
+  width: 34px;
+  height: 34px;
+  margin-right: 60px;
+
+  border: none;
+  padding: 0;
+  background: transparent;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 4px;
+
+  cursor: pointer;
+}
+
+
+
+.menu-button span {
+  width: 15px;
+  height: 1.4px;
+  background: #111418;
+  border-radius: 20px;
+}
+
+.menu-button span:nth-child(2) {
+  width: 11px;
+}
+
+.menu-button span:nth-child(3) {
+  width: 15px;
+}
+
+.page-content {
+  min-height: calc(100vh - 64px);
+}
+
+.site-header > .menu-button{
+
+
+    transform:translateX(-90px);
+
+
+}
+
+
+@media(max-width:768px){
+
+
+    .site-header>.menu-button{
+
+
+        transform:none;
+
+
+        margin-right:0;
+
+
+    }
+
+
+}
+
+/* White header elements only on the Booking page */
+
+.booking-theme .logo {
+  color: #ffffff;
+}
+
+.booking-theme .logo-wordmark {
+    color: white !important;
+}
+
+/* =======================================================
+   TABLET
+======================================================= */
+
+
+@media (max-width: 1024px) {
+
+
+  .app-shell{
+    padding:20px;
+  }
+
+
+  .site-header{
+    top:28px;
+    left:28px;
+    right:28px;
+  }
+
+
+  .page-content{
+    min-height:auto;
+  }
+
+
+}
+
+
+
+
+/* =======================================================
+   MOBILE
+======================================================= */
+
+
+@media (max-width:768px){
+
+
+  .app-shell{
+
+
+    padding:0;
+
+
+    background:#f3f1ee;
+  }
+
+
+  .site-canvas{
+
+
+    border-radius:0;
+
+
+    min-height:100vh;
+  }
+
+
+  .site-header{
+
+
+    position:fixed;
+
+
+    top:0;
+
+
+    left:0;
+
+
+    right:0;
+
+
+    padding:28px 22px 14px;
+
+
+    background:rgba(243,241,238,.96);
+    backdrop-filter:blur(14px);
+    z-index:200;
+  }
+
+
+  .page-content {
+  padding-top: 78px;
+  padding-bottom: 24px;
+  min-height: 100vh;
+}
+
+}
+
+/* =======================================================
+   MOBILE ABOUT — SINGLE SCREEN
+======================================================= */
+
+
+@media (max-width: 768px) {
+  .about-theme {
+    width: 100%;
+    height: 100svh;
+    min-height: 100svh;
+    overflow: hidden;
+  }
+
+
+  .about-theme .page-content {
+    width: 100%;
+    height: 100svh;
+    min-height: 100svh;
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  .menu-button {
+    width: 44px;
+    height: 44px;
+    margin-right: -8px;
+    align-items: center;
+  }
+
+
+  .menu-button span {
+    width: 18px;
+    height: 1.5px;
+    background: #111418;
+  }
+
+
+  .menu-button span:nth-child(2) {
+    width: 13px;
+  }
+
+
+  .menu-button span:nth-child(3) {
+    width: 18px;
+  }
+}
+
+/* Header divider — tablet and mobile only */
+
+
+@media (max-width: 1024px) {
+  .site-header {
+    border-bottom: 1px solid rgba(17, 20, 24, 0.08);
+  }
+}
+
+@media (max-width: 1024px) {
+  .booking-theme .site-header .logo-wordmark {
+    color: #111418 !important;
+  }
+}

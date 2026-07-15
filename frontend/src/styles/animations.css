@@ -1,0 +1,93 @@
+@keyframes stay-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+@keyframes stay-fade-in {
+  from {
+    opacity: 0;
+  }
+
+
+  to {
+    opacity: 1;
+  }
+}
+
+
+@keyframes stay-image-reveal {
+  from {
+    opacity: 0;
+    transform: scale(1.035);
+  }
+
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+.motion-fade-up {
+  animation: stay-fade-up 700ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+
+.motion-fade-in {
+  animation: stay-fade-in 600ms ease both;
+}
+
+
+.motion-image-reveal {
+  animation: stay-image-reveal 900ms
+    cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+
+.motion-delay-1 {
+  animation-delay: 80ms;
+}
+
+
+.motion-delay-2 {
+  animation-delay: 160ms;
+}
+
+
+.motion-delay-3 {
+  animation-delay: 240ms;
+}
+
+
+.motion-delay-4 {
+  animation-delay: 320ms;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,128 @@
+:root {
+  color-scheme: light;
+
+
+  --stay-bg: #f3f1ee;
+  --stay-surface: #faf9f7;
+  --stay-text: #111418;
+  --stay-muted: #777b7f;
+  --stay-line: rgba(17, 20, 24, 0.1);
+
+
+  font-family: Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #d8d4ce;
+  color: var(--stay-text);
+}
+
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+
+button,
+input,
+select,
+textarea {
+  font-size: inherit;
+}
+
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+
+img {
+  height: auto;
+}
+
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(17, 20, 24, 0.75);
+  outline-offset: 3px;
+}
+
+
+::selection {
+  background: #111418;
+  color: #ffffff;
+}
+
+
+@media (max-width: 768px) {
+  body {
+    background: var(--stay-bg);
+  }
+
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+}
+
+
+/* Lock only the mobile homepage to one stable screen. */
+
+
+@media (max-width: 768px) {
+  html.about-page-locked,
+  body.about-page-locked {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+
+  body.about-page-locked {
+    position: fixed;
+    inset: 0;
+  }
+}
