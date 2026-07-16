@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import {
+  adminApi,
+  authApi,
+  clearSession,
+  getToken,
+} from "../../services/api";
 import "./Admin.css";
-
-const API_URL = "http://localhost:5000/api";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Tous les statuts" },
@@ -103,80 +107,38 @@ function Admin() {
   const [hasLoadedCustomers, setHasLoadedCustomers] = useState(false);
   const [customersError, setCustomersError] = useState("");
 
-  const getToken = useCallback(() => {
-    return localStorage.getItem("stay_access_token");
-  }, []);
-
   const handleUnauthorizedSession = useCallback(() => {
-    localStorage.removeItem("stay_access_token");
-    localStorage.removeItem("stay_user");
+    clearSession();
 
     setAdminUser(null);
     setAccessState("unauthenticated");
   }, []);
 
   const apiRequest = useCallback(
-    async (endpoint, options = {}) => {
-      const token = getToken();
+    async (requestFn) => {
+      try {
+        return await requestFn();
+      } catch (error) {
+        if (error.status === 401) {
+          handleUnauthorizedSession();
+        } else if (error.status === 403) {
+          setAccessState("forbidden");
+        }
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers: {
-          ...(options.body
-            ? {
-                "Content-Type": "application/json",
-              }
-            : {}),
-          ...(token
-            ? {
-                Authorization: `Bearer ${token}`,
-              }
-            : {}),
-          ...options.headers,
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.status === 401) {
-        handleUnauthorizedSession();
-        throw new Error(data.message || "Votre session a expiré.");
+        throw error;
       }
-
-      if (response.status === 403) {
-        setAccessState("forbidden");
-        throw new Error(data.message || "Accès administrateur refusé.");
-      }
-
-      if (!response.ok) {
-        throw new Error(data.message || "Une erreur est survenue.");
-      }
-
-      return data;
     },
-    [getToken, handleUnauthorizedSession],
+    [handleUnauthorizedSession],
   );
 
   const verifyAdminAccess = useCallback(async () => {
-    const token = getToken();
-
-    if (!token) {
+    if (!getToken()) {
       setAccessState("unauthenticated");
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Votre session n’est plus valide.");
-      }
+      const data = await authApi.me();
 
       if (data.user.role !== "admin") {
         setAccessState("forbidden");
@@ -188,30 +150,17 @@ function Admin() {
     } catch (error) {
       handleUnauthorizedSession();
     }
-  }, [getToken, handleUnauthorizedSession]);
+  }, [handleUnauthorizedSession]);
 
   const loadDashboardStats = useCallback(async () => {
-    const data = await apiRequest("/admin/stats");
+    const data = await apiRequest(() => adminApi.stats());
     setStats(data.stats);
   }, [apiRequest]);
 
   const loadBookings = useCallback(async () => {
-    const query = new URLSearchParams();
-
-    if (statusFilter) {
-      query.set("status", statusFilter);
-    }
-
-    if (activeSearch) {
-      query.set("search", activeSearch);
-    }
-
-    const queryString = query.toString();
-    const endpoint = queryString
-      ? `/admin/bookings?${queryString}`
-      : "/admin/bookings";
-
-    const data = await apiRequest(endpoint);
+    const data = await apiRequest(() =>
+      adminApi.bookings({ status: statusFilter, search: activeSearch }),
+    );
 
     setBookings(data.bookings || []);
 
@@ -256,8 +205,8 @@ function Admin() {
 
     try {
       const [customersData, bookingsData] = await Promise.all([
-        apiRequest("/admin/customers"),
-        apiRequest("/admin/bookings"),
+        apiRequest(() => adminApi.customers()),
+        apiRequest(() => adminApi.bookings()),
       ]);
 
       setCustomers(customersData.customers || []);
@@ -416,14 +365,8 @@ function Admin() {
     });
 
     try {
-      const data = await apiRequest(
-        `/admin/bookings/${selectedBooking.id}/status`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            status: selectedStatus,
-          }),
-        },
+      const data = await apiRequest(() =>
+        adminApi.updateBookingStatus(selectedBooking.id, selectedStatus),
       );
 
       setSelectedBooking(data.booking);
@@ -457,8 +400,7 @@ function Admin() {
   }
 
   function handleLogout() {
-    localStorage.removeItem("stay_access_token");
-    localStorage.removeItem("stay_user");
+    clearSession();
     navigate("/account", { replace: true });
   }
 

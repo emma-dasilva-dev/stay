@@ -1,53 +1,20 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useDestinations } from "../../hooks/useDestinations";
 import "./destinations.css";
 
 
-const destinations = [
-  {
-    id: 1,
-    name: "Casa del Papa Resort",
-    location: "Ouidah",
-    nightlyPrice: "65 000 FCFA",
-    description:
-      "Un refuge paisible entre l’océan et la lagune, pensé pour ralentir et se retrouver.",
-    image:
-      "http://192.168.1.129:5000/uploads/destinations/casa-del-papa/main.jpg",
-  },
-  {
-    id: 2,
-    name: "Le Village d’Hélène",
-    location: "Lac Toho",
-    nightlyPrice: "55 000 FCFA",
-    description:
-      "Une adresse calme au bord du lac, entourée de nature et propice à la déconnexion.",
-    image:
-      "http://192.168.1.129:5000/uploads/destinations/village-helene/main.jpg",
-  },
-  {
-    id: 3,
-    name: "Sofitel Cotonou Marina",
-    location: "Cotonou",
-    nightlyPrice: "155 000 FCFA",
-    description:
-      "Une expérience contemporaine entre confort haut de gamme, spa et proximité de l’océan.",
-    image:
-      "http://192.168.1.129:5000/uploads/destinations/sofitel/main.jpg",
-  },
-  {
-    id: 4,
-    name: "Novotel Cotonou Orisha",
-    location: "Cotonou",
-    nightlyPrice: "93 000 FCFA",
-    description:
-      "Un séjour moderne et accessible, idéal pour découvrir Cotonou en toute simplicité.",
-    image:
-      "http://192.168.1.129:5000/uploads/destinations/novotel/main.jpg",
-  },
-];
+function formatNightlyPrice(startingPriceFcfa) {
+  return `${new Intl.NumberFormat("fr-FR").format(
+    startingPriceFcfa,
+  )} FCFA`;
+}
 
 
 function Destinations() {
+  const { destinations, isLoading, error, reload } =
+    useDestinations();
+
   const [activeDestinationId, setActiveDestinationId] =
     useState(null);
 
@@ -133,6 +100,31 @@ function Destinations() {
           Survolez une image ou touchez-la pour en savoir plus.
         </p>
       </header>
+
+      {isLoading && (
+        <div className="stay-state">
+          <span className="stay-loader"></span>
+          <p>Chargement des destinations...</p>
+        </div>
+      )}
+
+      {!isLoading && error && (
+        <div className="stay-state">
+          <p>{error}</p>
+          <button type="button" onClick={reload}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !error && destinations.length === 0 && (
+        <div className="stay-state">
+          <p>Aucune destination n’est disponible pour le moment.</p>
+        </div>
+      )}
+
+      {!isLoading && !error && destinations.length > 0 && (
+        <>
       <div className="destinations-desktop-layout">
   <div className="desktop-destination-list">
     {destinations.map((destination) => {
@@ -204,7 +196,9 @@ function Destinations() {
       <div className="desktop-destination-meta">
         <span>
           À partir de{" "}
-          {selectedDesktopDestination.nightlyPrice}
+          {formatNightlyPrice(
+            selectedDesktopDestination.startingPriceFcfa,
+          )}
           {" "} / nuit
         </span>
 
@@ -294,7 +288,11 @@ function Destinations() {
 
 
                 <p className="destination-price">
-                  À partir de {destination.nightlyPrice} / nuit
+                  À partir de{" "}
+                  {formatNightlyPrice(
+                    destination.startingPriceFcfa,
+                  )}{" "}
+                  / nuit
                 </p>
               </div>
             </article>
@@ -305,6 +303,8 @@ function Destinations() {
       <p className="price-note">
         * Les tarifs affichés sont donnés à titre indicatif.
       </p>
+        </>
+      )}
     </section>
   );
 }

@@ -92,17 +92,15 @@ function optionalAuthenticateToken(req, res, next) {
       role: decodedToken.role,
       email: decodedToken.email,
     };
-
-    return next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message:
-        error.name === "TokenExpiredError"
-          ? "Votre session a expiré. Veuillez vous reconnecter."
-          : "Jeton d’authentification invalide.",
-    });
+    /*
+      A missing/expired/invalid token on an optional route must not block
+      the request: fall back to guest access instead of rejecting it.
+    */
+    req.user = null;
   }
+
+  return next();
 }
 
 module.exports = {

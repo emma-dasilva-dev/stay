@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { resolveAssetUrl } from "../../services/api";
 import "./about.css";
 
 function About() {
@@ -10,7 +11,9 @@ function About() {
         <div className="about-right">
           <img
             className="hero-image"
-            src="http://192.168.1.129:5000/uploads/destinations/hero/hero.jpg"
+            src={resolveAssetUrl(
+              "/uploads/destinations/hero/hero.jpg",
+            )}
             alt="Séjour sélectionné par STAY"
           />
         </div>
@@ -41,7 +44,9 @@ function About() {
       <Link to="/destinations" className="explore-card">
   <div className="explore-card-media">
   <img
-    src="http://192.168.1.129:5000/uploads/destinations/hero/card.jpg"
+    src={resolveAssetUrl(
+      "/uploads/destinations/hero/card.jpg",
+    )}
     alt="Destination STAY"
     className="explore-card-image"
   />

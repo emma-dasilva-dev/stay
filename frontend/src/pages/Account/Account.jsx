@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  authApi,
+  bookingsApi,
+  clearSession,
+  getToken,
+  saveSession,
+} from "../../services/api";
 import "./account.css";
-
-const API_URL = "http://localhost:5000/api";
 
 const initialLoginForm = {
   email: "",
@@ -83,53 +88,38 @@ function Account() {
   }, [user]);
 
   async function restoreSession() {
-  const token = localStorage.getItem("stay_access_token");
+    const token = getToken();
 
-  if (!token) {
-    setIsCheckingSession(false);
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_URL}/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Votre session n’est plus valide.",
-      );
-    }
-
-    if (data.user.role === "admin") {
-      navigate("/admin", { replace: true });
+    if (!token) {
+      setIsCheckingSession(false);
       return;
     }
 
-    setUser(data.user);
-  } catch (error) {
-    localStorage.removeItem("stay_access_token");
-    localStorage.removeItem("stay_user");
+    try {
+      const data = await authApi.me();
 
-    setMessage({
-      type: "error",
-      text:
-        error.message ||
-        "Votre session a expiré. Veuillez vous reconnecter.",
-    });
-  } finally {
-    setIsCheckingSession(false);
+      if (data.user.role === "admin") {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
+      setUser(data.user);
+    } catch (error) {
+      clearSession();
+
+      setMessage({
+        type: "error",
+        text:
+          error.message ||
+          "Votre session a expiré. Veuillez vous reconnecter.",
+      });
+    } finally {
+      setIsCheckingSession(false);
+    }
   }
-}
 
   async function loadBookings() {
-    const token = localStorage.getItem("stay_access_token");
-
-    if (!token) {
+    if (!getToken()) {
       return;
     }
 
@@ -137,23 +127,7 @@ function Account() {
     setBookingsError("");
 
     try {
-      const response = await fetch(
-        `${API_URL}/bookings/my-bookings`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Impossible de charger vos réservations.",
-        );
-      }
+      const data = await bookingsApi.myBookings();
 
       setBookings(data.bookings || []);
     } catch (error) {
@@ -222,24 +196,10 @@ function Account() {
   clearMessage();
 
   try {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: loginForm.email.trim(),
-        password: loginForm.password,
-      }),
+    const data = await authApi.login({
+      email: loginForm.email.trim(),
+      password: loginForm.password,
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Impossible de vous connecter.",
-      );
-    }
 
     saveSession(data.token, data.user);
     setLoginForm(initialLoginForm);
@@ -297,29 +257,12 @@ function Account() {
     clearMessage();
 
     try {
-      const response = await fetch(
-        `${API_URL}/auth/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fullName,
-            phone,
-            email,
-            password,
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Impossible de créer le compte.",
-        );
-      }
+      const data = await authApi.register({
+        fullName,
+        phone,
+        email,
+        password,
+      });
 
       saveSession(data.token, data.user);
       setUser(data.user);
@@ -341,17 +284,8 @@ function Account() {
     }
   }
 
-  function saveSession(token, authenticatedUser) {
-    localStorage.setItem("stay_access_token", token);
-    localStorage.setItem(
-      "stay_user",
-      JSON.stringify(authenticatedUser),
-    );
-  }
-
   function handleLogout() {
-    localStorage.removeItem("stay_access_token");
-    localStorage.removeItem("stay_user");
+    clearSession();
 
     setUser(null);
     setBookings([]);

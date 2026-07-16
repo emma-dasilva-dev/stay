@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { bookingsApi } from "../../services/api";
+import { useDestinations } from "../../hooks/useDestinations";
 import "./Booking.css";
 
 
@@ -7,42 +9,6 @@ const CONTACT = {
   whatsappUrl: "https://wa.me/22940343012",
   callNumber: "+2290140343012",
 };
-
-
-const destinations = [
-  {
-    id: 1,
-    name: "Casa del Papa Resort & Spa",
-    location: "Ouidah",
-    startingPrice: 65000,
-    image:
-      "http://192.168.1.129:5000/uploads/destinations/casa-del-papa/main.jpg",
-  },
-  {
-    id: 2,
-    name: "Le Village d’Hélène",
-    location: "Lac Toho",
-    startingPrice: 55000,
-    image:
-      "http://192.168.1.129:5000/uploads/destinations/village-helene/main.jpg",
-  },
-  {
-    id: 3,
-    name: "Sofitel Cotonou Marina",
-    location: "Cotonou",
-    startingPrice: 155000,
-    image:
-      "http://192.168.1.129:5000/uploads/destinations/sofitel/main.jpg",
-  },
-  {
-    id: 4,
-    name: "Novotel Cotonou Orisha",
-    location: "Cotonou",
-    startingPrice: 93000,
-    image:
-      "http://192.168.1.129:5000/uploads/destinations/novotel/main.jpg",
-  },
-];
 
 
 function formatFcfa(amount) {
@@ -87,21 +53,18 @@ function calculateNights(checkIn, checkOut) {
 function Booking() {
   const [searchParams] = useSearchParams();
 
+  const {
+    destinations,
+    isLoading: isLoadingDestinations,
+    error: destinationsError,
+    reload: reloadDestinations,
+  } = useDestinations();
 
   const destinationFromUrl =
     searchParams.get("destination");
 
-
-  const initialDestinationId = destinations.some(
-    (destination) =>
-      destination.id === Number(destinationFromUrl),
-  )
-    ? destinationFromUrl
-    : "1";
-
-
   const [formData, setFormData] = useState({
-    destinationId: initialDestinationId,
+    destinationId: "",
     checkIn: "",
     checkOut: "",
     adults: 1,
@@ -126,16 +89,31 @@ function Booking() {
       text: "",
     });
 
+  useEffect(() => {
+    if (destinations.length === 0 || formData.destinationId) {
+      return;
+    }
+
+    const matchesUrl = destinations.some(
+      (destination) =>
+        destination.id === Number(destinationFromUrl),
+    );
+
+    setFormData((currentData) => ({
+      ...currentData,
+      destinationId: matchesUrl
+        ? destinationFromUrl
+        : String(destinations[0].id),
+    }));
+  }, [destinations, destinationFromUrl, formData.destinationId]);
+
 
   const selectedDestination = useMemo(() => {
-    return (
-      destinations.find(
-        (destination) =>
-          destination.id ===
-          Number(formData.destinationId),
-      ) ?? destinations[0]
+    return destinations.find(
+      (destination) =>
+        destination.id === Number(formData.destinationId),
     );
-  }, [formData.destinationId]);
+  }, [destinations, formData.destinationId]);
 
 
   const numberOfNights = useMemo(() => {
@@ -146,11 +124,12 @@ function Booking() {
   }, [formData.checkIn, formData.checkOut]);
 
 
-  const estimatedTotal =
-    numberOfNights > 0
-      ? selectedDestination.startingPrice *
+  const estimatedTotal = selectedDestination
+    ? numberOfNights > 0
+      ? selectedDestination.startingPriceFcfaFcfa *
         numberOfNights
-      : selectedDestination.startingPrice;
+      : selectedDestination.startingPriceFcfaFcfa
+    : 0;
 
 
   const today = new Date()
@@ -282,51 +261,21 @@ function Booking() {
   const saveBookingRequest = async (
     contactMethod,
   ) => {
-    const token = localStorage.getItem(
-      "stay_access_token",
-    );
-
-
-    const response = await fetch(
-      "http://localhost:5000/api/bookings",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token
-            ? {
-                Authorization: `Bearer ${token}`,
-              }
-            : {}),
-        },
-        body: JSON.stringify({
-          destinationId: Number(
-            formData.destinationId,
-          ),
-          fullName: formData.fullName.trim(),
-          email: formData.email.trim(),
-          phone: formData.phone.trim(),
-          checkIn: formData.checkIn,
-          checkOut: formData.checkOut,
-          adults: Number(formData.adults),
-          children: Number(formData.children),
-          specialRequest:
-            formData.specialRequest.trim(),
-          contactMethod,
-        }),
-      },
-    );
-
-
-    const data = await response.json();
-
-
-    if (!response.ok) {
-      throw new Error(
-        data.message ||
-          "Impossible d’enregistrer votre demande.",
-      );
-    }
+    const data = await bookingsApi.create({
+      destinationId: Number(
+        formData.destinationId,
+      ),
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      checkIn: formData.checkIn,
+      checkOut: formData.checkOut,
+      adults: Number(formData.adults),
+      children: Number(formData.children),
+      specialRequest:
+        formData.specialRequest.trim(),
+      contactMethod,
+    });
 
 
     return data.booking;
@@ -467,6 +416,40 @@ function Booking() {
   };
 
 
+  if (isLoadingDestinations) {
+    return (
+      <section className="booking-page">
+        <div className="stay-state">
+          <span className="stay-loader"></span>
+          <p>Chargement des destinations...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (destinationsError) {
+    return (
+      <section className="booking-page">
+        <div className="stay-state">
+          <p>{destinationsError}</p>
+          <button type="button" onClick={reloadDestinations}>
+            Réessayer
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (!selectedDestination) {
+    return (
+      <section className="booking-page">
+        <div className="stay-state">
+          <p>Aucune destination n’est disponible pour le moment.</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="booking-page">
       <div
@@ -569,7 +552,7 @@ function Booking() {
 
               <strong>
                 {formatFcfa(
-                  selectedDestination.startingPrice,
+                  selectedDestination.startingPriceFcfa,
                 )}{" "}
                 FCFA
               </strong>
@@ -856,7 +839,7 @@ function Booking() {
                       estimatedTotal,
                     )} FCFA`
                   : `À partir de ${formatFcfa(
-                      selectedDestination.startingPrice,
+                      selectedDestination.startingPriceFcfa,
                     )} FCFA`}
               </strong>
             </div>
@@ -947,7 +930,7 @@ function Booking() {
 
               <strong>
                 {formatFcfa(
-                  selectedDestination.startingPrice,
+                  selectedDestination.startingPriceFcfa,
                 )}{" "}
                 FCFA / nuit
               </strong>
@@ -1229,7 +1212,7 @@ function Booking() {
                         estimatedTotal,
                       )} FCFA`
                     : `À partir de ${formatFcfa(
-                        selectedDestination.startingPrice,
+                        selectedDestination.startingPriceFcfa,
                       )} FCFA`}
                 </strong>
               </div>
