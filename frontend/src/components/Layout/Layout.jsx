@@ -30,24 +30,6 @@ function Layout({ children }) {
   useEffect(() => {
     closeMenu();
   }, [closeMenu, location.pathname]);
-  useEffect(() => {
-  const rootElement = document.documentElement;
-
-
-  if (isAboutPage) {
-    rootElement.classList.add("about-page-locked");
-    document.body.classList.add("about-page-locked");
-  } else {
-    rootElement.classList.remove("about-page-locked");
-    document.body.classList.remove("about-page-locked");
-  }
-
-
-  return () => {
-    rootElement.classList.remove("about-page-locked");
-    document.body.classList.remove("about-page-locked");
-  };
-}, [isAboutPage]);
 
 
   return (
@@ -58,27 +40,29 @@ function Layout({ children }) {
 } ${isAboutPage ? "about-theme" : ""}`}
       >
         <header className="site-header">
-          <Logo />
+  <Logo />
 
 
-          <button
-            className="menu-button"
-            type="button"
-            aria-label="Ouvrir le menu"
-            aria-expanded={isMenuOpen}
-            onClick={() => setIsMenuOpen(true)}
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-        </header>
+  <div className="header-navigation">
+    <Navigation />
+  </div>
 
 
-        <div className="page-content">{children}</div>
+  <button
+    className="menu-button"
+    type="button"
+    aria-label="Ouvrir le menu"
+    aria-expanded={isMenuOpen}
+    onClick={() => setIsMenuOpen(true)}
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</header>
 
 
-        <Navigation />
+<div className="page-content">{children}</div>
 
 
         <HamburgerMenu

@@ -1,67 +1,276 @@
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { resolveAssetUrl } from "../../services/api";
 import "./about.css";
 
+
 function About() {
+  const heroVisualRef = useRef(null);
+
+
+  const handleHeroMouseMove = (event) => {
+    const visual = heroVisualRef.current;
+
+
+    if (!visual || window.innerWidth <= 1024) {
+      return;
+    }
+
+
+    const bounds = visual.getBoundingClientRect();
+
+
+    const mouseX = event.clientX - bounds.left;
+    const mouseY = event.clientY - bounds.top;
+
+
+    const centerX = bounds.width / 2;
+    const centerY = bounds.height / 2;
+
+
+    const rotateY = ((mouseX - centerX) / centerX) * 4;
+    const rotateX = -((mouseY - centerY) / centerY) * 3;
+
+
+    visual.style.setProperty("--hero-rotate-x", `${rotateX}deg`);
+    visual.style.setProperty("--hero-rotate-y", `${rotateY}deg`);
+    visual.style.setProperty(
+      "--hero-shift-x",
+      `${((mouseX - centerX) / centerX) * 8}px`,
+    );
+    visual.style.setProperty(
+      "--hero-shift-y",
+      `${((mouseY - centerY) / centerY) * 8}px`,
+    );
+  };
+
+
+  const handleHeroMouseLeave = () => {
+    const visual = heroVisualRef.current;
+
+
+    if (!visual) {
+      return;
+    }
+
+
+    visual.style.setProperty("--hero-rotate-x", "0deg");
+    visual.style.setProperty("--hero-rotate-y", "0deg");
+    visual.style.setProperty("--hero-shift-x", "0px");
+    visual.style.setProperty("--hero-shift-y", "0px");
+  };
+
+
   return (
-    <section className="about-page">
-      <div className="about-split">
-        <div className="about-left"></div>
+    <main className="about-page">
+      {/* =====================================================
+          HERO
+      ====================================================== */}
+      <section className="about-hero">
+        <div className="about-hero-content">
+          <div className="about-hero-copy">
+            <span className="about-eyebrow">01 / STAY</span>
 
-        <div className="about-right">
-          <img
-            className="hero-image"
-            src={resolveAssetUrl(
-              "/uploads/destinations/hero/hero.jpg",
-            )}
-            alt="Séjour sélectionné par STAY"
-          />
+
+            <div className="about-title-mask">
+              <h1 className="about-title">
+                <span>Aller</span>
+                <span>autrement.</span>
+              </h1>
+            </div>
+
+
+            <p className="about-intro">
+              Des séjours choisis pour sortir du cadre, ralentir et découvrir
+              le Bénin autrement.
+            </p>
+
+
+            <Link to="/destinations" className="about-discover-link">
+              <span>Découvrir nos destinations</span>
+              <span className="about-discover-arrow" aria-hidden="true">
+                →
+              </span>
+            </Link>
+
+
+            <div className="about-hero-index" aria-hidden="true">
+              <span>01</span>
+              <span className="about-index-line"></span>
+              <span>03</span>
+            </div>
+          </div>
+
+
+          <div
+            ref={heroVisualRef}
+            className="about-hero-visual"
+            onMouseMove={handleHeroMouseMove}
+            onMouseLeave={handleHeroMouseLeave}
+          >
+            <div className="about-3d-stage">
+              <div className="about-image-frame">
+                <img
+                  className="about-hero-image"
+                  src={resolveAssetUrl(
+                    "/uploads/destinations/hero/hero.jpg",
+                  )}
+                  alt="Séjour d'exception sélectionné par STAY"
+                />
+
+
+                <div className="about-image-depth"></div>
+                <div className="about-image-overlay"></div>
+
+
+                <div className="about-image-caption">
+                  <span className="about-caption-location">
+                    Cotonou, Bénin
+                  </span>
+
+
+                  <span className="about-caption-number">06°22'N</span>
+                </div>
+              </div>
+
+
+              <div className="about-3d-shadow" aria-hidden="true"></div>
+            </div>
+
+
+            <span className="about-vertical-label" aria-hidden="true">
+              Séjours sélectionnés
+            </span>
+          </div>
         </div>
-      </div>
 
-      <div className="about-center">
-        <div className="titles">
-          <h1 className="light-mode  masked-title">
-            Des lieux où le temps ralentir et l’ailleurs commence.
-          </h1>
-          <h1 className="dark-mode  masked-title">
-            Des lieux où le temps ralentir et l’ailleurs commence.
-          </h1>
+
+        <div className="about-scroll-indicator" aria-hidden="true">
+          <span>Défiler</span>
+          <span className="about-scroll-line"></span>
+        </div>
+      </section>
+
+
+      {/* =====================================================
+          MANIFESTO
+      ====================================================== */}
+      <section className="about-manifesto">
+        <div className="about-manifesto-number" aria-hidden="true">
+          02
         </div>
 
-        <div className="paragraph">
-          <p className="light-mode  ">
-            Une collection de séjours soigneusement sélectionnés autour de
-            Cotonou et du sud du Bénin.
-          </p>
-          <p className="dark-mode ">
-            Une collection de séjours soigneusement sélectionnés autour de
-            Cotonou et du sud du Bénin.
-          </p>
+
+        <div className="about-manifesto-content">
+          <span className="about-section-label">Notre vision</span>
+
+
+          <h2>
+            Le voyage ne commence pas toujours{" "}
+            <span>loin de chez soi.</span>
+          </h2>
+
+
+          <div className="about-manifesto-bottom">
+            <p>
+              STAY sélectionne des lieux singuliers à travers le Bénin.
+              Des adresses choisies pour leur caractère, leur atmosphère
+              et leur capacité à transformer quelques jours en véritable
+              parenthèse.
+            </p>
+
+
+            <Link to="/destinations" className="about-text-link">
+              Explorer la collection
+              <span aria-hidden="true">↗</span>
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <Link to="/destinations" className="explore-card">
-  <div className="explore-card-media">
-  <img
-    src={resolveAssetUrl(
-      "/uploads/destinations/hero/card.jpg",
-    )}
-    alt="Destination STAY"
-    className="explore-card-image"
-  />
-</div>
 
-  <div className="explore-card-content">
-    <span className="explore-card-kicker">Explorer</span>
-    <h3>Voir les destinations</h3>
-    <p>Des lieux choisis pour ralentir, respirer et partir sans aller loin.</p>
-  </div>
+      {/* =====================================================
+          FEATURED EXPERIENCE
+      ====================================================== */}
+      <section className="about-feature">
+        <div className="about-feature-heading">
+          <span className="about-section-label">La sélection STAY</span>
+          <span className="about-feature-count">01 — 04</span>
+        </div>
 
-  <span className="explore-card-arrow">→</span>
-</Link>
-    </section>
+
+        <Link to="/destinations" className="about-feature-card">
+          <div className="about-feature-image-wrap">
+            <img
+              src={resolveAssetUrl(
+                "/uploads/destinations/hero/card.jpg",
+              )}
+              alt="Découvrir les destinations sélectionnées par STAY"
+              className="about-feature-image"
+            />
+
+
+            <div className="about-feature-overlay"></div>
+
+
+            <span className="about-feature-explore">
+              Explorer
+              <span aria-hidden="true">↗</span>
+            </span>
+          </div>
+
+
+          <div className="about-feature-info">
+            <div>
+              <span className="about-feature-kicker">
+                Une autre façon de partir
+              </span>
+
+
+              <h2>Des lieux qui méritent le détour.</h2>
+            </div>
+
+
+            <p>
+              Une collection pensée pour celles et ceux qui recherchent
+              plus qu'une chambre : une atmosphère, un rythme et une
+              expérience à retenir.
+            </p>
+          </div>
+        </Link>
+      </section>
+
+
+      {/* =====================================================
+          FINAL CTA
+      ====================================================== */}
+      <section className="about-final">
+        <span className="about-final-label">
+          Votre prochaine parenthèse
+        </span>
+
+
+        <h2>
+          Et si vous partiez
+          <span>autrement ?</span>
+        </h2>
+
+
+        <Link to="/booking" className="about-final-button">
+          <span>Réserver un séjour</span>
+          <span aria-hidden="true">↗</span>
+        </Link>
+
+
+        <div className="about-final-footer">
+          <span>STAY</span>
+          <span>Cotonou · Bénin</span>
+          <span>Hospitalité sélectionnée</span>
+        </div>
+      </section>
+    </main>
   );
 }
+
 
 export default About;
