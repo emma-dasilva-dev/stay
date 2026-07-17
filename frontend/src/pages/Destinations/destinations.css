@@ -42,17 +42,15 @@
 
 
 .destinations-intro-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-
+  display: block;
 
   color: var(--destinations-muted);
+
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 
@@ -974,11 +972,6 @@
 
 
     font-size: 8px;
-  }
-
-
-  .destinations-intro-meta span:last-child {
-    text-align: right;
   }
 
 

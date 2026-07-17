@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import "./faq.css";
-
 
 const faqItems = [
   {
@@ -47,36 +46,37 @@ const faqItems = [
   },
 ];
 
-
 const categories = [
   {
     id: "all",
     label: "Toutes",
-    description: "Voir toutes les questions",
   },
   {
     id: "reservation",
     label: "Réservation",
-    description: "Demandes, confirmation et modifications",
   },
   {
     id: "payment",
     label: "Tarifs & paiement",
-    description: "Prix, estimation et règlement",
   },
   {
     id: "support",
     label: "Assistance",
-    description: "Contacter et être accompagné",
   },
 ];
 
-
 function FAQ() {
   const [openItemId, setOpenItemId] = useState(null);
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [activeCategory, setActiveCategory] =
+    useState("all");
 
+  const filteredFaqItems =
+    activeCategory === "all"
+      ? faqItems
+      : faqItems.filter(
+          (item) =>
+            item.category === activeCategory,
+        );
 
   const toggleItem = (itemId) => {
     setOpenItemId((currentId) =>
@@ -84,239 +84,179 @@ function FAQ() {
     );
   };
 
-
-  const filteredFaqItems = useMemo(() => {
-    const normalizedSearch = searchTerm
-      .trim()
-      .toLowerCase();
-
-
-    return faqItems.filter((item) => {
-      const matchesCategory =
-        activeCategory === "all" ||
-        item.category === activeCategory;
-
-
-      const matchesSearch =
-        normalizedSearch === "" ||
-        item.question
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        item.answer
-          .toLowerCase()
-          .includes(normalizedSearch);
-
-
-      return matchesCategory && matchesSearch;
-    });
-  }, [activeCategory, searchTerm]);
-
+  const handleCategoryChange = (categoryId) => {
+    setActiveCategory(categoryId);
+    setOpenItemId(null);
+  };
 
   return (
-    <section className="faq-page">
-      <div className="faq-shell">
-        <header className="faq-hero">
-          <span className="faq-eyebrow">
-            Centre d’aide
-          </span>
+    <main className="faq-page">
+      {/* =====================================================
+          HERO
+      ====================================================== */}
 
-
-          <h1>Questions fréquentes</h1>
-
-
-          <p>
-            Retrouvez rapidement les réponses essentielles
-            avant de réserver votre séjour avec STAY.
-          </p>
-        </header>
-
-
-        <div className="faq-search-wrap">
-          <label
-            htmlFor="faqSearch"
-            className="faq-search-label"
-          >
-            Rechercher une question
-          </label>
-
-
-          <div className="faq-search-field">
-            <input
-              id="faqSearch"
-              type="search"
-              placeholder="Que souhaitez-vous savoir ?"
-              value={searchTerm}
-              onChange={(event) =>
-                setSearchTerm(event.target.value)
-              }
-            />
-
-
-            <span
-              className="faq-search-icon"
-              aria-hidden="true"
-            >
-              ⌕
-            </span>
-          </div>
+      <section className="faq-hero">
+        <div className="faq-hero-meta">
+          <span>04 / FAQ</span>
         </div>
 
+        <div className="faq-hero-content">
+          <h1>
+            Questions,
+            <span>simplement.</span>
+          </h1>
+        </div>
+      </section>
 
-        <section className="faq-categories-section">
-          <div className="faq-section-heading">
-            <span>Catégories</span>
+      {/* =====================================================
+          FILTERS
+      ====================================================== */}
 
+      <section className="faq-filters">
+        <div className="faq-filter-label">
+          <span>Explorer par thème</span>
+        </div>
 
-            <p>
-              Sélectionnez un thème pour afficher les
-              questions correspondantes.
-            </p>
-          </div>
+        <div className="faq-filter-list">
+          {categories.map((category, index) => {
+            const isActive =
+              activeCategory === category.id;
 
+            return (
+              <button
+                key={category.id}
+                type="button"
+                className={
+                  isActive
+                    ? "faq-filter is-active"
+                    : "faq-filter"
+                }
+                onClick={() =>
+                  handleCategoryChange(
+                    category.id,
+                  )
+                }
+                aria-pressed={isActive}
+              >
+                <span className="faq-filter-number">
+                  {String(index + 1).padStart(
+                    2,
+                    "0",
+                  )}
+                </span>
 
-          <div className="faq-categories">
-            {categories.map((category) => {
-              const isActive =
-                activeCategory === category.id;
+                <span>
+                  {category.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
+      {/* =====================================================
+          QUESTIONS
+      ====================================================== */}
+
+      <section className="faq-questions">
+        <div className="faq-questions-header">
+          <span>À savoir</span>
+
+          <span>
+            {filteredFaqItems.length} résultat
+            {filteredFaqItems.length > 1
+              ? "s"
+              : ""}
+          </span>
+        </div>
+
+        <div className="faq-list">
+          {filteredFaqItems.map(
+            (item, index) => {
+              const isOpen =
+                openItemId === item.id;
+
+              const answerId =
+                `faq-answer-${item.id}`;
 
               return (
-                <button
-                  key={category.id}
-                  type="button"
-                  className={`faq-category-card ${
-                    isActive ? "is-active" : ""
-                  }`}
-                  onClick={() => {
-                    setActiveCategory(category.id);
-                    setOpenItemId(null);
-                  }}
-                  aria-pressed={isActive}
+                <article
+                  key={item.id}
+                  className={
+                    isOpen
+                      ? "faq-item is-open"
+                      : "faq-item"
+                  }
                 >
-                  <span className="faq-category-index">
-                    {String(
-                      categories.findIndex(
-                        (item) =>
-                          item.id === category.id,
-                      ) + 1,
-                    ).padStart(2, "0")}
-                  </span>
-
-
-                  <div>
-                    <h2>{category.label}</h2>
-
-
-                    <p>{category.description}</p>
-                  </div>
-
-
-                  <span
-                    className="faq-category-arrow"
-                    aria-hidden="true"
+                  <button
+                    type="button"
+                    className="faq-question"
+                    onClick={() =>
+                      toggleItem(item.id)
+                    }
+                    aria-expanded={isOpen}
+                    aria-controls={answerId}
                   >
-                    →
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+                    <span className="faq-question-number">
+                      {String(
+                        index + 1,
+                      ).padStart(
+                        2,
+                        "0",
+                      )}
+                    </span>
 
+                    <span className="faq-question-text">
+                      {item.question}
+                    </span>
 
-        <section className="faq-questions-section">
-          <div className="faq-section-heading faq-questions-heading">
-            <span>Questions</span>
+                    <span
+                      className="faq-question-icon"
+                      aria-hidden="true"
+                    >
+                      <span />
+                      <span />
+                    </span>
+                  </button>
 
-
-            <p>
-              {filteredFaqItems.length} résultat
-              {filteredFaqItems.length > 1 ? "s" : ""}
-            </p>
-          </div>
-
-
-          <div className="faq-list">
-            {filteredFaqItems.length > 0 ? (
-              filteredFaqItems.map((item) => {
-                const isOpen =
-                  openItemId === item.id;
-
-
-                const answerId =
-                  `faq-answer-${item.id}`;
-
-
-                return (
-                  <article
-                    key={item.id}
-                    className={`faq-item ${
-                      isOpen ? "is-open" : ""
-                    }`}
+                  <div
+                    id={answerId}
+                    className="faq-answer-wrapper"
+                    aria-hidden={!isOpen}
                   >
-                    <button
-                      type="button"
-                      className="faq-question"
-                      aria-expanded={isOpen}
-                      aria-controls={answerId}
-                      onClick={() =>
-                        toggleItem(item.id)
-                      }
-                    >
-                      <span className="faq-question-text">
-                        {item.question}
-                      </span>
+                    <div className="faq-answer">
+                      <div className="faq-answer-spacer" />
 
-
-                      <span
-                        className="faq-icon"
-                        aria-hidden="true"
-                      >
-                        {isOpen ? "−" : "+"}
-                      </span>
-                    </button>
-
-
-                    <div
-                      id={answerId}
-                      className="faq-answer-wrapper"
-                      aria-hidden={!isOpen}
-                    >
-                      <div className="faq-answer">
-                        <p>{item.answer}</p>
-                      </div>
+                      <p>
+                        {item.answer}
+                      </p>
                     </div>
-                  </article>
-                );
-              })
-            ) : (
-              <div className="faq-empty-state">
-                <span>Aucun résultat</span>
+                  </div>
+                </article>
+              );
+            },
+          )}
+        </div>
+      </section>
 
+      {/* =====================================================
+          FOOTER
+      ====================================================== */}
 
-                <p>
-                  Essayez un autre mot-clé ou revenez à
-                  toutes les catégories.
-                </p>
+      <section className="faq-end">
+        <span>STAY</span>
 
+        <p>
+          Chaque séjour commence par une question.
+          Les bonnes adresses viennent ensuite.
+        </p>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setActiveCategory("all");
-                  }}
-                >
-                  Réinitialiser
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
-    </section>
+        <span>
+          Cotonou · Bénin
+        </span>
+      </section>
+    </main>
   );
 }
-
 
 export default FAQ;

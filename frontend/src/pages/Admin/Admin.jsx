@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import {
   adminApi,
   authApi,
@@ -23,6 +31,18 @@ const STATUS_LABELS = {
   confirmed: "Confirmée",
   cancelled: "Annulée",
   completed: "Terminée",
+};
+
+const EMPLOYEE_ROLE_LABELS = {
+  manager: "Manager",
+  reservation_agent: "Agent de réservation",
+};
+
+const INITIAL_EMPLOYEE_FORM = {
+  fullName: "",
+  email: "",
+  phone: "",
+  role: "reservation_agent",
 };
 
 function formatFcfa(amount) {
@@ -49,7 +69,7 @@ function formatDate(dateValue) {
 
 function formatDateTime(dateValue) {
   if (!dateValue) {
-    return "Non renseignée";
+    return "Jamais";
   }
 
   return new Intl.DateTimeFormat("fr-FR", {
@@ -61,11 +81,35 @@ function formatDateTime(dateValue) {
   }).format(new Date(dateValue));
 }
 
+async function copyTextToClipboard(value) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const temporaryInput = document.createElement("textarea");
+  temporaryInput.value = value;
+  temporaryInput.setAttribute("readonly", "");
+  temporaryInput.style.position = "fixed";
+  temporaryInput.style.opacity = "0";
+  document.body.appendChild(temporaryInput);
+  temporaryInput.select();
+
+  const copied = document.execCommand("copy");
+  document.body.removeChild(temporaryInput);
+
+  if (!copied) {
+    throw new Error("Copy failed");
+  }
+}
+
 function Admin() {
   const navigate = useNavigate();
 
   const [accessState, setAccessState] = useState("checking");
   const [adminUser, setAdminUser] = useState(null);
+  const [activeView, setActiveView] = useState("dashboard");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [stats, setStats] = useState({
     totalBookings: 0,
@@ -77,47 +121,57 @@ function Admin() {
     totalCustomers: 0,
   });
 
+  const [dashboardBookings, setDashboardBookings] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
-
   const [searchInput, setSearchInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(true);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-
   const [dashboardError, setDashboardError] = useState("");
+  const [bookingsError, setBookingsError] = useState("");
   const [actionMessage, setActionMessage] = useState({
     type: "",
     text: "",
   });
-
   const [selectedStatus, setSelectedStatus] = useState("");
-
-  const [activeView, setActiveView] = useState("overview");
 
   const [customers, setCustomers] = useState([]);
   const [allBookings, setAllBookings] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-
   const [customerSearchInput, setCustomerSearchInput] = useState("");
-
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
   const [hasLoadedCustomers, setHasLoadedCustomers] = useState(false);
   const [customersError, setCustomersError] = useState("");
 
+  const [employees, setEmployees] = useState([]);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+  const [hasLoadedEmployees, setHasLoadedEmployees] = useState(false);
+  const [employeesError, setEmployeesError] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [isEmployeeDrawerOpen, setIsEmployeeDrawerOpen] = useState(false);
+  const [employeeForm, setEmployeeForm] = useState(INITIAL_EMPLOYEE_FORM);
+  const [employeeMessage, setEmployeeMessage] = useState({
+    type: "",
+    text: "",
+  });
+  const [temporaryPin, setTemporaryPin] = useState("");
+  const [isSavingEmployee, setIsSavingEmployee] = useState(false);
+  const [isResettingPin, setIsResettingPin] = useState(false);
+  const [isUpdatingEmployeeStatus, setIsUpdatingEmployeeStatus] = useState(false);
+
   const handleUnauthorizedSession = useCallback(() => {
     clearSession();
-
     setAdminUser(null);
     setAccessState("unauthenticated");
   }, []);
 
   const apiRequest = useCallback(
-    async (requestFn) => {
+    async (requestFunction) => {
       try {
-        return await requestFn();
+        return await requestFunction();
       } catch (error) {
         if (error.status === 401) {
           handleUnauthorizedSession();
@@ -147,7 +201,7 @@ function Admin() {
 
       setAdminUser(data.user);
       setAccessState("authorized");
-    } catch (error) {
+    } catch {
       handleUnauthorizedSession();
     }
   }, [handleUnauthorizedSession]);
@@ -157,24 +211,10 @@ function Admin() {
     setStats(data.stats);
   }, [apiRequest]);
 
-  const loadBookings = useCallback(async () => {
-    const data = await apiRequest(() =>
-      adminApi.bookings({ status: statusFilter, search: activeSearch }),
-    );
-
-    setBookings(data.bookings || []);
-
-    setSelectedBooking((currentBooking) => {
-      if (!currentBooking) {
-        return null;
-      }
-
-      return (
-        data.bookings.find((booking) => booking.id === currentBooking.id) ||
-        null
-      );
-    });
-  }, [activeSearch, apiRequest, statusFilter]);
+  const loadDashboardBookings = useCallback(async () => {
+    const data = await apiRequest(() => adminApi.bookings());
+    setDashboardBookings(data.bookings || []);
+  }, [apiRequest]);
 
   const loadDashboard = useCallback(
     async (showLoader = true) => {
@@ -185,7 +225,10 @@ function Admin() {
       setDashboardError("");
 
       try {
-        await Promise.all([loadDashboardStats(), loadBookings()]);
+        await Promise.all([
+          loadDashboardStats(),
+          loadDashboardBookings(),
+        ]);
       } catch (error) {
         setDashboardError(
           error.message || "Impossible de charger le tableau de bord.",
@@ -196,7 +239,49 @@ function Admin() {
         }
       }
     },
-    [loadBookings, loadDashboardStats],
+    [loadDashboardBookings, loadDashboardStats],
+  );
+
+  const loadReservations = useCallback(
+    async (showLoader = true) => {
+      if (showLoader) {
+        setIsLoadingBookings(true);
+      }
+
+      setBookingsError("");
+
+      try {
+        const data = await apiRequest(() =>
+          adminApi.bookings({
+            status: statusFilter,
+            search: activeSearch,
+          }),
+        );
+
+        setBookings(data.bookings || []);
+
+        setSelectedBooking((currentBooking) => {
+          if (!currentBooking) {
+            return null;
+          }
+
+          return (
+            (data.bookings || []).find(
+              (booking) => booking.id === currentBooking.id,
+            ) || null
+          );
+        });
+      } catch (error) {
+        setBookingsError(
+          error.message || "Impossible de charger les réservations.",
+        );
+      } finally {
+        if (showLoader) {
+          setIsLoadingBookings(false);
+        }
+      }
+    },
+    [activeSearch, apiRequest, statusFilter],
   );
 
   const loadCustomers = useCallback(async () => {
@@ -221,6 +306,23 @@ function Admin() {
     }
   }, [apiRequest]);
 
+  const loadEmployees = useCallback(async () => {
+    setIsLoadingEmployees(true);
+    setEmployeesError("");
+
+    try {
+      const data = await apiRequest(() => adminApi.employees());
+      setEmployees(data.employees || []);
+      setHasLoadedEmployees(true);
+    } catch (error) {
+      setEmployeesError(
+        error.message || "Impossible de charger l’équipe.",
+      );
+    } finally {
+      setIsLoadingEmployees(false);
+    }
+  }, [apiRequest]);
+
   useEffect(() => {
     verifyAdminAccess();
   }, [verifyAdminAccess]);
@@ -234,24 +336,66 @@ function Admin() {
 
     const refreshInterval = window.setInterval(() => {
       loadDashboard(false);
+
+      if (activeView === "reservations") {
+        loadReservations(false);
+      }
     }, 20000);
 
     return () => {
       window.clearInterval(refreshInterval);
     };
-  }, [accessState, loadDashboard]);
+  }, [
+    accessState,
+    activeView,
+    loadDashboard,
+    loadReservations,
+  ]);
 
   useEffect(() => {
-    if (accessState !== "authorized") {
+    if (
+      accessState !== "authorized" ||
+      activeView !== "reservations"
+    ) {
       return;
     }
 
-    if (activeView !== "customers" || hasLoadedCustomers) {
+    loadReservations();
+  }, [accessState, activeView, loadReservations]);
+
+  useEffect(() => {
+    if (
+      accessState !== "authorized" ||
+      activeView !== "customers" ||
+      hasLoadedCustomers
+    ) {
       return;
     }
 
     loadCustomers();
-  }, [accessState, activeView, hasLoadedCustomers, loadCustomers]);
+  }, [
+    accessState,
+    activeView,
+    hasLoadedCustomers,
+    loadCustomers,
+  ]);
+
+  useEffect(() => {
+    if (
+      accessState !== "authorized" ||
+      activeView !== "team" ||
+      hasLoadedEmployees
+    ) {
+      return;
+    }
+
+    loadEmployees();
+  }, [
+    accessState,
+    activeView,
+    hasLoadedEmployees,
+    loadEmployees,
+  ]);
 
   useEffect(() => {
     if (selectedBooking) {
@@ -262,14 +406,14 @@ function Admin() {
   const visibleStats = useMemo(
     () => [
       {
-        label: "Réservations",
-        value: stats.totalBookings,
-        helper: "Toutes les demandes",
+        label: "À traiter",
+        value: stats.pendingBookings,
+        helper: "Nouvelles demandes",
       },
       {
-        label: "En attente",
-        value: stats.pendingBookings,
-        helper: "À traiter",
+        label: "Contactées",
+        value: stats.contactedBookings,
+        helper: "Suivi en cours",
       },
       {
         label: "Confirmées",
@@ -283,6 +427,19 @@ function Admin() {
       },
     ],
     [stats],
+  );
+
+  const priorityBookings = useMemo(
+    () =>
+      dashboardBookings
+        .filter((booking) => booking.status === "pending")
+        .slice(0, 4),
+    [dashboardBookings],
+  );
+
+  const recentBookings = useMemo(
+    () => dashboardBookings.slice(0, 5),
+    [dashboardBookings],
   );
 
   const filteredCustomers = useMemo(() => {
@@ -321,18 +478,12 @@ function Admin() {
 
   function openBooking(booking) {
     setSelectedBooking(booking);
-    setActionMessage({
-      type: "",
-      text: "",
-    });
+    setActionMessage({ type: "", text: "" });
   }
 
   function closeBookingPanel() {
     setSelectedBooking(null);
-    setActionMessage({
-      type: "",
-      text: "",
-    });
+    setActionMessage({ type: "", text: "" });
   }
 
   function openCustomer(customer) {
@@ -343,10 +494,58 @@ function Admin() {
     setSelectedCustomer(null);
   }
 
+  function openCreateEmployee() {
+    setSelectedEmployee(null);
+    setEmployeeForm(INITIAL_EMPLOYEE_FORM);
+    setTemporaryPin("");
+    setEmployeeMessage({ type: "", text: "" });
+    setIsEmployeeDrawerOpen(true);
+  }
+
+  function openEditEmployee(employee) {
+    setSelectedEmployee(employee);
+    setEmployeeForm({
+      fullName: employee.fullName || "",
+      email: employee.email || "",
+      phone: employee.phone || "",
+      role: employee.role || "reservation_agent",
+    });
+    setTemporaryPin("");
+    setEmployeeMessage({ type: "", text: "" });
+    setIsEmployeeDrawerOpen(true);
+  }
+
+  function closeEmployeeDrawer() {
+    setIsEmployeeDrawerOpen(false);
+    setSelectedEmployee(null);
+    setEmployeeForm(INITIAL_EMPLOYEE_FORM);
+    setTemporaryPin("");
+    setEmployeeMessage({ type: "", text: "" });
+  }
+
+  function handleEmployeeChange(event) {
+    const { name, value } = event.target;
+
+    setEmployeeForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }));
+
+    if (employeeMessage.text) {
+      setEmployeeMessage({ type: "", text: "" });
+    }
+  }
+
   function handleViewChange(view) {
     setActiveView(view);
     setSelectedBooking(null);
     setSelectedCustomer(null);
+    setIsEmployeeDrawerOpen(false);
+    setSelectedEmployee(null);
+    setEmployeeForm(INITIAL_EMPLOYEE_FORM);
+    setTemporaryPin("");
+    setEmployeeMessage({ type: "", text: "" });
+    setIsMobileMenuOpen(false);
   }
 
   async function updateBookingStatus() {
@@ -359,19 +558,25 @@ function Admin() {
     }
 
     setIsUpdatingStatus(true);
-    setActionMessage({
-      type: "",
-      text: "",
-    });
+    setActionMessage({ type: "", text: "" });
 
     try {
       const data = await apiRequest(() =>
-        adminApi.updateBookingStatus(selectedBooking.id, selectedStatus),
+        adminApi.updateBookingStatus(
+          selectedBooking.id,
+          selectedStatus,
+        ),
       );
 
       setSelectedBooking(data.booking);
 
       setBookings((currentBookings) =>
+        currentBookings.map((booking) =>
+          booking.id === data.booking.id ? data.booking : booking,
+        ),
+      );
+
+      setDashboardBookings((currentBookings) =>
         currentBookings.map((booking) =>
           booking.id === data.booking.id ? data.booking : booking,
         ),
@@ -392,10 +597,216 @@ function Admin() {
     } catch (error) {
       setActionMessage({
         type: "error",
-        text: error.message || "Impossible de modifier le statut.",
+        text:
+          error.message ||
+          "Impossible de modifier le statut.",
       });
     } finally {
       setIsUpdatingStatus(false);
+    }
+  }
+
+  async function handleEmployeeSubmit(event) {
+    event.preventDefault();
+
+    setIsSavingEmployee(true);
+    setEmployeeMessage({ type: "", text: "" });
+
+    if (!selectedEmployee) {
+      setTemporaryPin("");
+    }
+
+    try {
+      if (selectedEmployee) {
+        const data = await apiRequest(() =>
+          adminApi.updateEmployee(
+            selectedEmployee.id,
+            employeeForm,
+          ),
+        );
+
+        setEmployees((currentEmployees) =>
+          currentEmployees.map((employee) =>
+            employee.id === data.employee.id
+              ? data.employee
+              : employee,
+          ),
+        );
+
+        setSelectedEmployee(data.employee);
+        setEmployeeForm({
+          fullName: data.employee.fullName || "",
+          email: data.employee.email || "",
+          phone: data.employee.phone || "",
+          role: data.employee.role || "reservation_agent",
+        });
+
+        setEmployeeMessage({
+          type: "success",
+          text: "Les informations ont été mises à jour.",
+        });
+      } else {
+        const data = await apiRequest(() =>
+          adminApi.createEmployee(employeeForm),
+        );
+
+        setEmployees((currentEmployees) => [
+          data.employee,
+          ...currentEmployees,
+        ]);
+
+        setSelectedEmployee(data.employee);
+        setEmployeeForm({
+          fullName: data.employee.fullName || "",
+          email: data.employee.email || "",
+          phone: data.employee.phone || "",
+          role: data.employee.role || "reservation_agent",
+        });
+        setTemporaryPin(data.temporaryPin || "");
+        setHasLoadedEmployees(true);
+
+        setEmployeeMessage({
+          type: "success",
+          text: "Le membre de l’équipe a été créé.",
+        });
+      }
+    } catch (error) {
+      setEmployeeMessage({
+        type: "error",
+        text:
+          error.message ||
+          "Impossible d’enregistrer ce membre de l’équipe.",
+      });
+    } finally {
+      setIsSavingEmployee(false);
+    }
+  }
+
+  async function handleEmployeeStatus(employee) {
+    if (!employee || isUpdatingEmployeeStatus) {
+      return;
+    }
+
+    const nextStatus = !employee.isActive;
+    const actionLabel = nextStatus ? "réactiver" : "désactiver";
+    const confirmed = window.confirm(
+      `${actionLabel[0].toUpperCase()}${actionLabel.slice(1)} l’accès de ${employee.fullName} ?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsUpdatingEmployeeStatus(true);
+    setEmployeeMessage({ type: "", text: "" });
+
+    try {
+      const data = await apiRequest(() =>
+        adminApi.updateEmployeeStatus(employee.id, nextStatus),
+      );
+
+      setEmployees((currentEmployees) =>
+        currentEmployees.map((currentEmployee) =>
+          currentEmployee.id === data.employee.id
+            ? data.employee
+            : currentEmployee,
+        ),
+      );
+
+      setSelectedEmployee(data.employee);
+      setEmployeeMessage({
+        type: "success",
+        text: data.message,
+      });
+    } catch (error) {
+      setEmployeeMessage({
+        type: "error",
+        text:
+          error.message ||
+          "Impossible de modifier cet accès.",
+      });
+    } finally {
+      setIsUpdatingEmployeeStatus(false);
+    }
+  }
+
+  async function handleResetEmployeePin() {
+    if (!selectedEmployee || isResettingPin) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Générer un nouveau code PIN pour ${selectedEmployee.fullName} ? L’ancien code ne fonctionnera plus.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsResettingPin(true);
+    setTemporaryPin("");
+    setEmployeeMessage({ type: "", text: "" });
+
+    try {
+      const data = await apiRequest(() =>
+        adminApi.resetEmployeePin(selectedEmployee.id),
+      );
+
+      setTemporaryPin(data.temporaryPin || "");
+      setEmployeeMessage({
+        type: "success",
+        text: "Un nouveau code PIN temporaire a été généré.",
+      });
+    } catch (error) {
+      setEmployeeMessage({
+        type: "error",
+        text:
+          error.message ||
+          "Impossible de réinitialiser le code PIN.",
+      });
+    } finally {
+      setIsResettingPin(false);
+    }
+  }
+
+  async function copyTemporaryPin() {
+    if (!temporaryPin) {
+      return;
+    }
+
+    try {
+      await copyTextToClipboard(temporaryPin);
+      setEmployeeMessage({
+        type: "success",
+        text: "Le code PIN a été copié.",
+      });
+    } catch {
+      setEmployeeMessage({
+        type: "error",
+        text:
+          "Impossible de copier automatiquement le code PIN. Copiez-le manuellement.",
+      });
+    }
+  }
+
+  function handleRefresh() {
+    if (activeView === "dashboard") {
+      loadDashboard();
+      return;
+    }
+
+    if (activeView === "reservations") {
+      loadReservations();
+      return;
+    }
+
+    if (activeView === "customers") {
+      loadCustomers();
+      return;
+    }
+
+    if (activeView === "team") {
+      loadEmployees();
     }
   }
 
@@ -408,7 +819,7 @@ function Admin() {
     return (
       <main className="admin-access-page">
         <div className="admin-access-message">
-          <span className="admin-loader"></span>
+          <span className="admin-loader" />
           <p>Vérification de votre accès...</p>
         </div>
       </main>
@@ -424,14 +835,14 @@ function Admin() {
       <main className="admin-access-page">
         <div className="admin-access-denied">
           <span>403</span>
-
           <h1>Accès refusé</h1>
-
           <p>
-            Cette page est exclusivement réservée aux administrateurs de STAY.
+            Cette page est réservée à l’administration de STAY.
           </p>
-
-          <button type="button" onClick={() => navigate("/account")}>
+          <button
+            type="button"
+            onClick={() => navigate("/account")}
+          >
             Retourner à mon compte
           </button>
         </div>
@@ -439,10 +850,50 @@ function Admin() {
     );
   }
 
+  const isRefreshing =
+    activeView === "dashboard"
+      ? isLoadingDashboard
+      : activeView === "reservations"
+        ? isLoadingBookings
+        : activeView === "customers"
+          ? isLoadingCustomers
+          : isLoadingEmployees;
+
   return (
     <main className="admin-page">
-      <aside className="admin-sidebar">
+      <div className="admin-mobile-header">
         <div>
+          <span className="admin-mobile-logo">STAY</span>
+          <span className="admin-mobile-label">Administration</span>
+        </div>
+
+        <button
+          type="button"
+          className="admin-menu-toggle"
+          aria-label="Ouvrir le menu"
+          aria-expanded={isMobileMenuOpen}
+          onClick={() =>
+            setIsMobileMenuOpen((current) => !current)
+          }
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+      </div>
+
+      <div
+        className={`admin-sidebar-backdrop ${
+          isMobileMenuOpen ? "is-visible" : ""
+        }`}
+        onClick={() => setIsMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={`admin-sidebar ${isMobileMenuOpen ? "is-open" : ""}`}
+      >
+        <div className="admin-sidebar-brand">
           <span className="admin-logo">STAY</span>
           <span className="admin-logo-label">Administration</span>
         </div>
@@ -450,10 +901,11 @@ function Admin() {
         <nav className="admin-sidebar-nav">
           <button
             type="button"
-            className={activeView === "overview" ? "is-active" : ""}
-            onClick={() => handleViewChange("overview")}
+            className={activeView === "dashboard" ? "is-active" : ""}
+            onClick={() => handleViewChange("dashboard")}
           >
-            Vue d’ensemble
+            Tableau de bord
+            <span>01</span>
           </button>
 
           <button
@@ -462,6 +914,7 @@ function Admin() {
             onClick={() => handleViewChange("reservations")}
           >
             Réservations
+            <span>02</span>
           </button>
 
           <button
@@ -470,6 +923,16 @@ function Admin() {
             onClick={() => handleViewChange("customers")}
           >
             Clients
+            <span>03</span>
+          </button>
+
+          <button
+            type="button"
+            className={activeView === "team" ? "is-active" : ""}
+            onClick={() => handleViewChange("team")}
+          >
+            Équipe
+            <span>04</span>
           </button>
         </nav>
 
@@ -477,6 +940,7 @@ function Admin() {
           <div>
             <span>Connecté en tant que</span>
             <strong>{adminUser?.fullName || "Administrateur"}</strong>
+            <small>Super Admin</small>
           </div>
 
           <button type="button" onClick={handleLogout}>
@@ -487,393 +951,773 @@ function Admin() {
 
       <section className="admin-main">
         <header className="admin-header">
-          <div>
+          <div className="admin-header-copy">
             <span className="admin-header-eyebrow">
-  {activeView === "overview" && "Tableau de bord"}
-  {activeView === "reservations" &&
-    "Gestion des réservations"}
-  {activeView === "customers" &&
-    "Gestion des clients"}
-</span>
+              {activeView === "dashboard" && "TABLEAU DE BORD"}
+              {activeView === "reservations" && "RÉSERVATIONS"}
+              {activeView === "customers" && "CLIENTS"}
+              {activeView === "team" && "ÉQUIPE"}
+            </span>
 
-<h1>
-  {activeView === "overview" && (
-    <>
-      Bonjour,{" "}
-      {adminUser?.fullName?.split(" ")[0] ||
-        "Administrateur"}
-      .
-    </>
-  )}
+            <h1>
+              {activeView === "dashboard" && (
+                <>
+                  Bonjour,
+                  <span> {adminUser?.fullName || "Administrateur"}.</span>
+                </>
+              )}
+              {activeView === "reservations" && "Réservations"}
+              {activeView === "customers" && "Clients"}
+              {activeView === "team" && "Équipe"}
+            </h1>
 
-  {activeView === "reservations" &&
-    "Réservations"}
-
-  {activeView === "customers" &&
-    "Clients"}
-</h1>
-
-<p>
-  {activeView === "overview" &&
-    "Suivez l’activité générale de la plateforme STAY."}
-
-  {activeView === "reservations" &&
-    "Consultez, recherchez et mettez à jour les demandes de réservation."}
-
-  {activeView === "customers" &&
-    "Consultez les comptes clients et leur historique de réservation."}
-</p>
+            <p>
+              {activeView === "dashboard" &&
+                "Voici ce qui demande votre attention aujourd’hui."}
+              {activeView === "reservations" &&
+                "Consultez et gérez toutes les demandes de réservation."}
+              {activeView === "customers" &&
+                "Retrouvez les clients STAY et leur historique."}
+              {activeView === "team" &&
+                "Gérez les membres de l’équipe et leurs accès à STAY."}
+            </p>
           </div>
 
           <button
             type="button"
             className="admin-refresh-button"
-            onClick={() =>
-              activeView === "customers" ? loadCustomers() : loadDashboard()
-            }
-            disabled={
-              activeView === "customers"
-                ? isLoadingCustomers
-                : isLoadingDashboard
-            }
+            onClick={handleRefresh}
+            disabled={isRefreshing}
           >
-            {(activeView === "customers"
-              ? isLoadingCustomers
-              : isLoadingDashboard)
-              ? "Actualisation..."
-              : "Actualiser"}
+            {isRefreshing ? "Actualisation..." : "Actualiser"}
           </button>
         </header>
 
-        {dashboardError && activeView !== "customers" && (
-          <div className="admin-global-error">
-            <p>{dashboardError}</p>
-
-            <button type="button" onClick={() => loadDashboard()}>
-              Réessayer
-            </button>
-          </div>
+        {activeView === "dashboard" && (
+          <DashboardView
+            stats={stats}
+            visibleStats={visibleStats}
+            priorityBookings={priorityBookings}
+            recentBookings={recentBookings}
+            isLoading={isLoadingDashboard}
+            error={dashboardError}
+            onReload={loadDashboard}
+            onOpenBooking={openBooking}
+            onViewReservations={() => handleViewChange("reservations")}
+          />
         )}
 
-        {activeView === "overview" && (
-          <section className="admin-stats">
-            {visibleStats.map((stat) => (
-              <article key={stat.label} className="admin-stat-card">
-                <span>{stat.label}</span>
-                <strong>{stat.value}</strong>
-                <p>{stat.helper}</p>
-              </article>
-            ))}
-          </section>
-        )}
-
-        {(activeView === "overview" ||
-  activeView === "reservations") && (
-          <section className="admin-bookings-section">
-            <div className="admin-section-heading">
-              <div>
-                <span>Gestion</span>
-                <h2>
-  {activeView === "overview"
-    ? "Réservations récentes"
-    : "Toutes les réservations"}
-</h2>
-              </div>
-
-              <span className="admin-results-count">
-                {bookings.length} résultat
-                {bookings.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            <div className="admin-booking-tools">
-              <form className="admin-search" onSubmit={handleSearchSubmit}>
-                <input
-                  type="search"
-                  placeholder="Référence, client, hôtel..."
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                />
-
-                {activeSearch && (
-                  <button
-                    type="button"
-                    className="admin-clear-search"
-                    onClick={clearSearch}
-                  >
-                    Effacer
-                  </button>
-                )}
-
-                <button type="submit">Rechercher</button>
-              </form>
-
-              <select
-                className="admin-status-filter"
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status.value || "all"} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {activeView === "reservations" && (
-  <div className="admin-booking-tools">
-    <form
-      className="admin-search"
-      onSubmit={handleSearchSubmit}
-    >
-      <input
-        type="search"
-        placeholder="Référence, client, hôtel..."
-        value={searchInput}
-        onChange={(event) =>
-          setSearchInput(event.target.value)
-        }
-      />
-
-
-      {activeSearch && (
-        <button
-          type="button"
-          className="admin-clear-search"
-          onClick={clearSearch}
-        >
-          Effacer
-        </button>
-      )}
-
-
-      <button type="submit">
-        Rechercher
-      </button>
-    </form>
-
-
-    <select
-      className="admin-status-filter"
-      value={statusFilter}
-      onChange={(event) =>
-        setStatusFilter(event.target.value)
-      }
-    >
-      {STATUS_OPTIONS.map((status) => (
-        <option
-          key={status.value || "all"}
-          value={status.value}
-        >
-          {status.label}
-        </option>
-      ))}
-    </select>
-  </div>
-)}
-
-            <div className="admin-table-wrapper">
-              {isLoadingDashboard ? (
-                <div className="admin-table-state">
-                  <span className="admin-loader"></span>
-                  <p>Chargement des réservations...</p>
-                </div>
-              ) : bookings.length === 0 ? (
-                <div className="admin-table-state">
-                  <h3>Aucune réservation trouvée</h3>
-                  <p>Modifiez la recherche ou le filtre utilisé.</p>
-                </div>
-              ) : (
-                <table className="admin-bookings-table">
-                  <thead>
-                    <tr>
-                      <th>Référence</th>
-                      <th>Client</th>
-                      <th>Destination</th>
-                      <th>Arrivée</th>
-                      <th>Statut</th>
-                      <th aria-label="Actions"></th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {(
-  activeView === "overview"
-    ? bookings.slice(0, 5)
-    : bookings
-).map((booking) => (
-                      <tr key={booking.id}>
-                        <td>
-                          <span className="admin-reference">
-                            {booking.reference}
-                          </span>
-                        </td>
-
-                        <td>
-                          <strong>{booking.customer.fullName}</strong>
-                          <span>{booking.customer.email}</span>
-                        </td>
-
-                        <td>
-                          <strong>{booking.destination.name}</strong>
-                          <span>{booking.destination.location}</span>
-                        </td>
-
-                        <td>
-                          <strong>{formatDate(booking.checkIn)}</strong>
-                          <span>
-                            {booking.adults + booking.children} voyageur
-                            {booking.adults + booking.children > 1 ? "s" : ""}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span
-                            className={`admin-status-badge ${booking.status}`}
-                          >
-                            {STATUS_LABELS[booking.status] || booking.status}
-                          </span>
-                        </td>
-
-                        <td>
-                          <button
-                            type="button"
-                            className="admin-view-button"
-                            onClick={() => openBooking(booking)}
-                          >
-                            Voir
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </section>
+        {activeView === "reservations" && (
+          <ReservationsView
+            bookings={bookings}
+            searchInput={searchInput}
+            activeSearch={activeSearch}
+            statusFilter={statusFilter}
+            isLoading={isLoadingBookings}
+            error={bookingsError}
+            onSearchInputChange={setSearchInput}
+            onSearchSubmit={handleSearchSubmit}
+            onClearSearch={clearSearch}
+            onStatusChange={setStatusFilter}
+            onReload={loadReservations}
+            onOpenBooking={openBooking}
+          />
         )}
 
         {activeView === "customers" && (
-          <section className="admin-customers-section">
-            <div className="admin-section-heading">
-              <div>
-                <span>Base clients</span>
-                <h2>Clients enregistrés</h2>
-              </div>
+          <CustomersView
+            customers={filteredCustomers}
+            searchInput={customerSearchInput}
+            isLoading={isLoadingCustomers}
+            error={customersError}
+            onSearchChange={setCustomerSearchInput}
+            onReload={loadCustomers}
+            onOpenCustomer={openCustomer}
+          />
+        )}
 
-              <span className="admin-results-count">
-                {filteredCustomers.length} client
-                {filteredCustomers.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            <div className="admin-customer-tools">
-              <input
-                type="search"
-                className="admin-customer-search"
-                placeholder="Nom, e-mail, téléphone..."
-                value={customerSearchInput}
-                onChange={(event) =>
-                  setCustomerSearchInput(event.target.value)
-                }
-              />
-            </div>
-
-            {customersError && (
-              <div className="admin-global-error">
-                <p>{customersError}</p>
-
-                <button type="button" onClick={loadCustomers}>
-                  Réessayer
-                </button>
-              </div>
-            )}
-
-            <div className="admin-table-wrapper">
-              {isLoadingCustomers ? (
-                <div className="admin-table-state">
-                  <span className="admin-loader"></span>
-                  <p>Chargement des clients...</p>
-                </div>
-              ) : filteredCustomers.length === 0 ? (
-                <div className="admin-table-state">
-                  <h3>Aucun client trouvé</h3>
-                  <p>Modifiez votre recherche.</p>
-                </div>
-              ) : (
-                <table className="admin-customers-table">
-                  <thead>
-                    <tr>
-                      <th>Client</th>
-                      <th>Téléphone</th>
-                      <th>Inscription</th>
-                      <th>Réservations</th>
-                      <th aria-label="Actions"></th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {filteredCustomers.map((customer) => (
-                      <tr key={customer.id}>
-                        <td>
-                          <strong>{customer.fullName}</strong>
-                          <span>{customer.email}</span>
-                        </td>
-
-                        <td>{customer.phone || "Non renseigné"}</td>
-
-                        <td>{formatDate(customer.createdAt)}</td>
-
-                        <td>
-                          <span className="admin-customer-count">
-                            {customer.bookingCount}
-                          </span>
-                        </td>
-
-                        <td>
-                          <button
-                            type="button"
-                            className="admin-view-button"
-                            onClick={() => openCustomer(customer)}
-                          >
-                            Voir
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </section>
+        {activeView === "team" && (
+          <TeamView
+            employees={employees}
+            isLoading={isLoadingEmployees}
+            error={employeesError}
+            onReload={loadEmployees}
+            onCreate={openCreateEmployee}
+            onEdit={openEditEmployee}
+          />
         )}
       </section>
 
+      <BookingDrawer
+        booking={selectedBooking}
+        selectedStatus={selectedStatus}
+        actionMessage={actionMessage}
+        isUpdatingStatus={isUpdatingStatus}
+        onStatusChange={setSelectedStatus}
+        onSaveStatus={updateBookingStatus}
+        onClose={closeBookingPanel}
+      />
+
+      <CustomerDrawer
+        customer={selectedCustomer}
+        bookings={selectedCustomerBookings}
+        onClose={closeCustomerPanel}
+      />
+
+      <EmployeeDrawer
+        isOpen={isEmployeeDrawerOpen}
+        employee={selectedEmployee}
+        form={employeeForm}
+        message={employeeMessage}
+        temporaryPin={temporaryPin}
+        isSaving={isSavingEmployee}
+        isResettingPin={isResettingPin}
+        isUpdatingStatus={isUpdatingEmployeeStatus}
+        onChange={handleEmployeeChange}
+        onSubmit={handleEmployeeSubmit}
+        onStatusChange={handleEmployeeStatus}
+        onResetPin={handleResetEmployeePin}
+        onCopyPin={copyTemporaryPin}
+        onClose={closeEmployeeDrawer}
+      />
+    </main>
+  );
+}
+
+function DashboardView({
+  stats,
+  visibleStats,
+  priorityBookings,
+  recentBookings,
+  isLoading,
+  error,
+  onReload,
+  onOpenBooking,
+  onViewReservations,
+}) {
+  if (error) {
+    return (
+      <div className="admin-global-error">
+        <p>{error}</p>
+        <button type="button" onClick={() => onReload()}>
+          Réessayer
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <section className="admin-dashboard-meta">
+        <span>
+          {stats.totalBookings} réservation
+          {stats.totalBookings !== 1 ? "s" : ""} enregistrée
+          {stats.totalBookings !== 1 ? "s" : ""}
+        </span>
+      </section>
+
+      <section className="admin-stats">
+        {visibleStats.map((stat, index) => (
+          <article key={stat.label} className="admin-stat-card">
+            <span className="admin-stat-index">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <div>
+              <span>{stat.label}</span>
+              <strong>{stat.value}</strong>
+              <p>{stat.helper}</p>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <div className="admin-dashboard-grid">
+        <section className="admin-dashboard-section">
+          <div className="admin-section-heading">
+            <div>
+              <span>Priorité</span>
+              <h2>À traiter maintenant</h2>
+            </div>
+            <span className="admin-results-count">
+              {priorityBookings.length} demande
+              {priorityBookings.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          {isLoading ? (
+            <AdminLoadingState text="Chargement des demandes..." />
+          ) : priorityBookings.length === 0 ? (
+            <div className="admin-empty-state">
+              <span>00</span>
+              <div>
+                <h3>Rien d’urgent pour le moment.</h3>
+                <p>Toutes les nouvelles demandes ont été traitées.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="admin-priority-list">
+              {priorityBookings.map((booking, index) => (
+                <BookingRow
+                  key={booking.id}
+                  booking={booking}
+                  index={index}
+                  onOpen={onOpenBooking}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <aside className="admin-dashboard-summary">
+          <div className="admin-section-heading">
+            <div>
+              <span>Activité</span>
+              <h2>Dernières demandes</h2>
+            </div>
+          </div>
+
+          <div className="admin-recent-list">
+            {recentBookings.slice(0, 4).map((booking) => (
+              <button
+                key={booking.id}
+                type="button"
+                onClick={() => onOpenBooking(booking)}
+              >
+                <div>
+                  <strong>{booking.customer.fullName}</strong>
+                  <span>{booking.destination.name}</span>
+                </div>
+                <span className={`admin-status-badge ${booking.status}`}>
+                  {STATUS_LABELS[booking.status] || booking.status}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className="admin-text-link"
+            onClick={onViewReservations}
+          >
+            Voir toutes les réservations
+            <span>↗</span>
+          </button>
+        </aside>
+      </div>
+    </>
+  );
+}
+
+function ReservationsView({
+  bookings,
+  searchInput,
+  activeSearch,
+  statusFilter,
+  isLoading,
+  error,
+  onSearchInputChange,
+  onSearchSubmit,
+  onClearSearch,
+  onStatusChange,
+  onReload,
+  onOpenBooking,
+}) {
+  return (
+    <section className="admin-content-section">
+      <div className="admin-section-heading">
+        <div>
+          <span>Gestion</span>
+          <h2>Toutes les réservations</h2>
+        </div>
+        <span className="admin-results-count">
+          {bookings.length} résultat{bookings.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      <div className="admin-booking-tools">
+        <form className="admin-search" onSubmit={onSearchSubmit}>
+          <input
+            type="search"
+            placeholder="Référence, client, hôtel..."
+            value={searchInput}
+            onChange={(event) => onSearchInputChange(event.target.value)}
+          />
+
+          {activeSearch && (
+            <button
+              type="button"
+              className="admin-clear-search"
+              onClick={onClearSearch}
+            >
+              Effacer
+            </button>
+          )}
+
+          <button type="submit">Rechercher</button>
+        </form>
+
+        <select
+          className="admin-status-filter"
+          value={statusFilter}
+          onChange={(event) => onStatusChange(event.target.value)}
+        >
+          {STATUS_OPTIONS.map((status) => (
+            <option key={status.value || "all"} value={status.value}>
+              {status.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {error && (
+        <div className="admin-global-error">
+          <p>{error}</p>
+          <button type="button" onClick={() => onReload()}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <AdminLoadingState text="Chargement des réservations..." />
+      ) : bookings.length === 0 ? (
+        <div className="admin-large-empty-state">
+          <span>00</span>
+          <h3>Aucune réservation trouvée.</h3>
+          <p>Modifiez votre recherche ou le filtre sélectionné.</p>
+        </div>
+      ) : (
+        <BookingCollection
+          bookings={bookings}
+          onOpenBooking={onOpenBooking}
+        />
+      )}
+    </section>
+  );
+}
+
+function CustomersView({
+  customers,
+  searchInput,
+  isLoading,
+  error,
+  onSearchChange,
+  onReload,
+  onOpenCustomer,
+}) {
+  return (
+    <section className="admin-content-section">
+      <div className="admin-section-heading">
+        <div>
+          <span>Base clients</span>
+          <h2>Clients enregistrés</h2>
+        </div>
+        <span className="admin-results-count">
+          {customers.length} client{customers.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      <div className="admin-customer-tools">
+        <input
+          type="search"
+          className="admin-customer-search"
+          placeholder="Nom, e-mail, téléphone..."
+          value={searchInput}
+          onChange={(event) => onSearchChange(event.target.value)}
+        />
+      </div>
+
+      {error && (
+        <div className="admin-global-error">
+          <p>{error}</p>
+          <button type="button" onClick={onReload}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <AdminLoadingState text="Chargement des clients..." />
+      ) : customers.length === 0 ? (
+        <div className="admin-large-empty-state">
+          <span>00</span>
+          <h3>Aucun client trouvé.</h3>
+          <p>Modifiez votre recherche.</p>
+        </div>
+      ) : (
+        <CustomerCollection
+          customers={customers}
+          onOpenCustomer={onOpenCustomer}
+        />
+      )}
+    </section>
+  );
+}
+
+function TeamView({
+  employees,
+  isLoading,
+  error,
+  onReload,
+  onCreate,
+  onEdit,
+}) {
+  return (
+    <section className="admin-content-section">
+      <div className="admin-team-heading">
+        <div className="admin-section-heading">
+          <div>
+            <span>Administration</span>
+            <h2>Membres de l’équipe</h2>
+          </div>
+          <span className="admin-results-count">
+            {employees.length} membre{employees.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          className="admin-add-employee"
+          onClick={onCreate}
+        >
+          Ajouter un membre
+          <span>+</span>
+        </button>
+      </div>
+
+      {error && (
+        <div className="admin-global-error">
+          <p>{error}</p>
+          <button type="button" onClick={onReload}>
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {isLoading ? (
+        <AdminLoadingState text="Chargement de l’équipe..." />
+      ) : employees.length === 0 ? (
+        <div className="admin-team-empty">
+          <span>00</span>
+          <div>
+            <h3>L’équipe commence ici.</h3>
+            <p>
+              Ajoutez votre premier Manager ou Agent de réservation.
+            </p>
+            <button type="button" onClick={onCreate}>
+              Ajouter un membre
+              <span>↗</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <EmployeeCollection employees={employees} onEdit={onEdit} />
+      )}
+    </section>
+  );
+}
+
+function BookingCollection({ bookings, onOpenBooking }) {
+  return (
+    <div className="admin-collection">
+      <div className="admin-desktop-table">
+        <table className="admin-bookings-table">
+          <thead>
+            <tr>
+              <th>Référence</th>
+              <th>Client</th>
+              <th>Destination</th>
+              <th>Arrivée</th>
+              <th>Statut</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {bookings.map((booking) => (
+              <tr key={booking.id}>
+                <td>
+                  <span className="admin-reference">{booking.reference}</span>
+                </td>
+                <td>
+                  <strong>{booking.customer.fullName}</strong>
+                  <span>{booking.customer.email}</span>
+                </td>
+                <td>
+                  <strong>{booking.destination.name}</strong>
+                  <span>{booking.destination.location}</span>
+                </td>
+                <td>
+                  <strong>{formatDate(booking.checkIn)}</strong>
+                  <span>
+                    {booking.adults + booking.children} voyageur
+                    {booking.adults + booking.children > 1 ? "s" : ""}
+                  </span>
+                </td>
+                <td>
+                  <span className={`admin-status-badge ${booking.status}`}>
+                    {STATUS_LABELS[booking.status] || booking.status}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="admin-view-button"
+                    onClick={() => onOpenBooking(booking)}
+                  >
+                    Voir
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="admin-mobile-cards">
+        {bookings.map((booking, index) => (
+          <BookingRow
+            key={booking.id}
+            booking={booking}
+            index={index}
+            onOpen={onOpenBooking}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BookingRow({ booking, index, onOpen }) {
+  return (
+    <article className="admin-booking-row">
+      <span className="admin-booking-index">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+
+      <div className="admin-booking-row-main">
+        <div className="admin-booking-row-top">
+          <div>
+            <span className="admin-reference">{booking.reference}</span>
+            <h3>{booking.destination.name}</h3>
+            <p>{booking.customer.fullName}</p>
+          </div>
+          <span className={`admin-status-badge ${booking.status}`}>
+            {STATUS_LABELS[booking.status] || booking.status}
+          </span>
+        </div>
+
+        <div className="admin-booking-row-bottom">
+          <span>{formatDate(booking.checkIn)}</span>
+          <button type="button" onClick={() => onOpen(booking)}>
+            Ouvrir
+            <span>↗</span>
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function CustomerCollection({ customers, onOpenCustomer }) {
+  return (
+    <div className="admin-collection">
+      <div className="admin-desktop-table">
+        <table className="admin-customers-table">
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Téléphone</th>
+              <th>Inscription</th>
+              <th>Réservations</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {customers.map((customer) => (
+              <tr key={customer.id}>
+                <td>
+                  <strong>{customer.fullName}</strong>
+                  <span>{customer.email}</span>
+                </td>
+                <td>{customer.phone || "Non renseigné"}</td>
+                <td>{formatDate(customer.createdAt)}</td>
+                <td>
+                  <span className="admin-customer-count">
+                    {customer.bookingCount}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="admin-view-button"
+                    onClick={() => onOpenCustomer(customer)}
+                  >
+                    Voir
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="admin-mobile-cards">
+        {customers.map((customer, index) => (
+          <article key={customer.id} className="admin-customer-card">
+            <span className="admin-booking-index">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <div>
+              <strong>{customer.fullName}</strong>
+              <span>{customer.email}</span>
+              <p>
+                {customer.bookingCount} réservation
+                {customer.bookingCount !== 1 ? "s" : ""}
+              </p>
+              <button
+                type="button"
+                onClick={() => onOpenCustomer(customer)}
+              >
+                Voir le profil
+                <span>↗</span>
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmployeeCollection({ employees, onEdit }) {
+  return (
+    <div className="admin-employee-collection">
+      <div className="admin-desktop-table">
+        <table className="admin-employees-table">
+          <thead>
+            <tr>
+              <th>Membre</th>
+              <th>Rôle</th>
+              <th>Téléphone</th>
+              <th>Statut</th>
+              <th>Dernière connexion</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {employees.map((employee) => (
+              <tr key={employee.id}>
+                <td>
+                  <strong>{employee.fullName}</strong>
+                  <span>{employee.email}</span>
+                </td>
+                <td>
+                  {EMPLOYEE_ROLE_LABELS[employee.role] || employee.role}
+                </td>
+                <td>{employee.phone}</td>
+                <td>
+                  <span
+                    className={`admin-employee-status ${
+                      employee.isActive ? "active" : "inactive"
+                    }`}
+                  >
+                    {employee.isActive ? "Actif" : "Inactif"}
+                  </span>
+                </td>
+                <td>{formatDateTime(employee.lastLoginAt)}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="admin-view-button"
+                    onClick={() => onEdit(employee)}
+                  >
+                    Gérer
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="admin-mobile-cards">
+        {employees.map((employee, index) => (
+          <article key={employee.id} className="admin-employee-card">
+            <span className="admin-booking-index">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <div>
+              <div className="admin-employee-card-top">
+                <div>
+                  <h3>{employee.fullName}</h3>
+                  <span>
+                    {EMPLOYEE_ROLE_LABELS[employee.role] || employee.role}
+                  </span>
+                </div>
+                <span
+                  className={`admin-employee-status ${
+                    employee.isActive ? "active" : "inactive"
+                  }`}
+                >
+                  {employee.isActive ? "Actif" : "Inactif"}
+                </span>
+              </div>
+
+              <p>{employee.email}</p>
+              <span className="admin-employee-last-login">
+                Dernière connexion : {formatDateTime(employee.lastLoginAt)}
+              </span>
+
+              <button type="button" onClick={() => onEdit(employee)}>
+                Gérer le membre
+                <span>↗</span>
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AdminLoadingState({ text }) {
+  return (
+    <div className="admin-table-state">
+      <span className="admin-loader" />
+      <p>{text}</p>
+    </div>
+  );
+}
+
+function BookingDrawer({
+  booking,
+  selectedStatus,
+  actionMessage,
+  isUpdatingStatus,
+  onStatusChange,
+  onSaveStatus,
+  onClose,
+}) {
+  return (
+    <>
       <div
-        className={`admin-drawer-backdrop ${
-          selectedBooking ? "is-visible" : ""
-        }`}
-        onClick={closeBookingPanel}
+        className={`admin-drawer-backdrop ${booking ? "is-visible" : ""}`}
+        onClick={onClose}
         aria-hidden="true"
       />
 
       <aside
-        className={`admin-booking-drawer ${selectedBooking ? "is-open" : ""}`}
-        aria-hidden={!selectedBooking}
+        className={`admin-booking-drawer ${booking ? "is-open" : ""}`}
+        aria-hidden={!booking}
       >
-        {selectedBooking && (
+        {booking && (
           <>
             <header className="admin-drawer-header">
               <div>
                 <span>Détails de la demande</span>
-                <h2>{selectedBooking.reference}</h2>
+                <h2>{booking.reference}</h2>
               </div>
-
-              <button
-                type="button"
-                onClick={closeBookingPanel}
-                aria-label="Fermer"
-              >
+              <button type="button" onClick={onClose} aria-label="Fermer">
                 ×
               </button>
             </header>
@@ -881,82 +1725,91 @@ function Admin() {
             <div className="admin-drawer-content">
               <section>
                 <span className="admin-detail-label">Client</span>
-
-                <h3>{selectedBooking.customer.fullName}</h3>
+                <h3>{booking.customer.fullName}</h3>
 
                 <dl className="admin-detail-list">
                   <div>
                     <dt>Adresse e-mail</dt>
-                    <dd>{selectedBooking.customer.email}</dd>
+                    <dd>{booking.customer.email}</dd>
                   </div>
-
                   <div>
                     <dt>Téléphone</dt>
-                    <dd>{selectedBooking.customer.phone}</dd>
+                    <dd>{booking.customer.phone}</dd>
                   </div>
                 </dl>
+
+                <div className="admin-customer-actions">
+                  <a href={`mailto:${booking.customer.email}`}>E-mail</a>
+                  {booking.customer.phone && (
+                    <>
+                      <a href={`tel:${booking.customer.phone}`}>Appeler</a>
+                      <a
+                        href={`https://wa.me/${booking.customer.phone.replace(
+                          /\D/g,
+                          "",
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        WhatsApp
+                      </a>
+                    </>
+                  )}
+                </div>
               </section>
 
               <section>
                 <span className="admin-detail-label">Séjour</span>
-
-                <h3>{selectedBooking.destination.name}</h3>
-
+                <h3>{booking.destination.name}</h3>
                 <p className="admin-detail-location">
-                  {selectedBooking.destination.location}
+                  {booking.destination.location}
                 </p>
 
                 <dl className="admin-detail-list two-columns">
                   <div>
                     <dt>Arrivée</dt>
-                    <dd>{formatDate(selectedBooking.checkIn)}</dd>
+                    <dd>{formatDate(booking.checkIn)}</dd>
                   </div>
-
                   <div>
                     <dt>Départ</dt>
-                    <dd>{formatDate(selectedBooking.checkOut)}</dd>
+                    <dd>{formatDate(booking.checkOut)}</dd>
                   </div>
-
                   <div>
                     <dt>Adultes</dt>
-                    <dd>{selectedBooking.adults}</dd>
+                    <dd>{booking.adults}</dd>
                   </div>
-
                   <div>
                     <dt>Enfants</dt>
-                    <dd>{selectedBooking.children}</dd>
+                    <dd>{booking.children}</dd>
                   </div>
                 </dl>
               </section>
 
               <section>
                 <span className="admin-detail-label">Demande</span>
-
                 <dl className="admin-detail-list">
                   <div>
                     <dt>Estimation</dt>
-                    <dd>{formatFcfa(selectedBooking.estimatedTotalFcfa)}</dd>
+                    <dd>{formatFcfa(booking.estimatedTotalFcfa)}</dd>
                   </div>
-
                   <div>
                     <dt>Méthode de contact</dt>
                     <dd>
-                      {selectedBooking.contactMethod === "whatsapp"
+                      {booking.contactMethod === "whatsapp"
                         ? "WhatsApp"
                         : "Appel"}
                     </dd>
                   </div>
-
                   <div>
                     <dt>Créée le</dt>
-                    <dd>{formatDateTime(selectedBooking.createdAt)}</dd>
+                    <dd>{formatDateTime(booking.createdAt)}</dd>
                   </div>
                 </dl>
 
                 <div className="admin-special-request">
                   <span>Demande particulière</span>
                   <p>
-                    {selectedBooking.specialRequest ||
+                    {booking.specialRequest ||
                       "Aucune demande particulière."}
                   </p>
                 </div>
@@ -966,11 +1819,10 @@ function Admin() {
                 <label htmlFor="booking-status">
                   Statut de la réservation
                 </label>
-
                 <select
                   id="booking-status"
                   value={selectedStatus}
-                  onChange={(event) => setSelectedStatus(event.target.value)}
+                  onChange={(event) => onStatusChange(event.target.value)}
                 >
                   {STATUS_OPTIONS.filter((status) => status.value).map(
                     (status) => (
@@ -982,7 +1834,9 @@ function Admin() {
                 </select>
 
                 {actionMessage.text && (
-                  <p className={`admin-action-message ${actionMessage.type}`}>
+                  <p
+                    className={`admin-action-message ${actionMessage.type}`}
+                  >
                     {actionMessage.text}
                   </p>
                 )}
@@ -990,10 +1844,9 @@ function Admin() {
                 <button
                   type="button"
                   className="admin-save-status"
-                  onClick={updateBookingStatus}
+                  onClick={onSaveStatus}
                   disabled={
-                    isUpdatingStatus ||
-                    selectedStatus === selectedBooking.status
+                    isUpdatingStatus || selectedStatus === booking.status
                   }
                 >
                   {isUpdatingStatus
@@ -1005,34 +1858,31 @@ function Admin() {
           </>
         )}
       </aside>
+    </>
+  );
+}
 
+function CustomerDrawer({ customer, bookings, onClose }) {
+  return (
+    <>
       <div
-        className={`admin-drawer-backdrop ${
-          selectedCustomer ? "is-visible" : ""
-        }`}
-        onClick={closeCustomerPanel}
+        className={`admin-drawer-backdrop ${customer ? "is-visible" : ""}`}
+        onClick={onClose}
         aria-hidden="true"
       />
 
       <aside
-        className={`admin-booking-drawer admin-customer-drawer ${
-          selectedCustomer ? "is-open" : ""
-        }`}
-        aria-hidden={!selectedCustomer}
+        className={`admin-booking-drawer ${customer ? "is-open" : ""}`}
+        aria-hidden={!customer}
       >
-        {selectedCustomer && (
+        {customer && (
           <>
             <header className="admin-drawer-header">
               <div>
                 <span>Profil client</span>
-                <h2>{selectedCustomer.fullName}</h2>
+                <h2>{customer.fullName}</h2>
               </div>
-
-              <button
-                type="button"
-                onClick={closeCustomerPanel}
-                aria-label="Fermer"
-              >
+              <button type="button" onClick={onClose} aria-label="Fermer">
                 ×
               </button>
             </header>
@@ -1040,80 +1890,65 @@ function Admin() {
             <div className="admin-drawer-content">
               <section>
                 <span className="admin-detail-label">Coordonnées</span>
-
                 <dl className="admin-detail-list">
                   <div>
                     <dt>Adresse e-mail</dt>
-                    <dd>{selectedCustomer.email}</dd>
+                    <dd>{customer.email}</dd>
                   </div>
-
                   <div>
                     <dt>Téléphone</dt>
-                    <dd>{selectedCustomer.phone || "Non renseigné"}</dd>
+                    <dd>{customer.phone || "Non renseigné"}</dd>
                   </div>
-
                   <div>
                     <dt>Compte créé le</dt>
-                    <dd>{formatDate(selectedCustomer.createdAt)}</dd>
+                    <dd>{formatDate(customer.createdAt)}</dd>
                   </div>
                 </dl>
+
                 <div className="admin-customer-actions">
-  <a href={`mailto:${selectedCustomer.email}`}>
-    Envoyer un e-mail
-  </a>
-
-
-  {selectedCustomer.phone && (
-    <a href={`tel:${selectedCustomer.phone}`}>
-      Appeler
-    </a>
-  )}
-
-
-  {selectedCustomer.phone && (
-    <a
-      href={`https://wa.me/${selectedCustomer.phone.replace(
-        /\D/g,
-        "",
-      )}`}
-      target="_blank"
-      rel="noreferrer"
-    >
-      WhatsApp
-    </a>
-  )}
-</div>
-
+                  <a href={`mailto:${customer.email}`}>Envoyer un e-mail</a>
+                  {customer.phone && (
+                    <>
+                      <a href={`tel:${customer.phone}`}>Appeler</a>
+                      <a
+                        href={`https://wa.me/${customer.phone.replace(
+                          /\D/g,
+                          "",
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        WhatsApp
+                      </a>
+                    </>
+                  )}
+                </div>
               </section>
 
               <section className="admin-status-editor">
                 <span className="admin-detail-label">
-                  Historique des réservations (
-                  {selectedCustomerBookings.length})
+                  Historique des réservations ({bookings.length})
                 </span>
 
-                {selectedCustomerBookings.length === 0 ? (
+                {bookings.length === 0 ? (
                   <p className="admin-customer-empty">
                     Aucune réservation enregistrée pour ce client.
                   </p>
                 ) : (
                   <ul className="admin-customer-history">
-                    {selectedCustomerBookings.map((booking) => (
+                    {bookings.map((booking) => (
                       <li key={booking.id}>
                         <div className="admin-history-top">
                           <span className="admin-reference">
                             {booking.reference}
                           </span>
-
                           <span
                             className={`admin-status-badge ${booking.status}`}
                           >
                             {STATUS_LABELS[booking.status] || booking.status}
                           </span>
                         </div>
-
                         <strong>{booking.destination.name}</strong>
-
                         <span className="admin-history-meta">
                           {formatDate(booking.checkIn)} ·{" "}
                           {formatFcfa(booking.estimatedTotalFcfa)}
@@ -1127,7 +1962,199 @@ function Admin() {
           </>
         )}
       </aside>
-    </main>
+    </>
+  );
+}
+
+function EmployeeDrawer({
+  isOpen,
+  employee,
+  form,
+  message,
+  temporaryPin,
+  isSaving,
+  isResettingPin,
+  isUpdatingStatus,
+  onChange,
+  onSubmit,
+  onStatusChange,
+  onResetPin,
+  onCopyPin,
+  onClose,
+}) {
+  return (
+    <>
+      <div
+        className={`admin-drawer-backdrop ${isOpen ? "is-visible" : ""}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={`admin-booking-drawer admin-employee-drawer ${
+          isOpen ? "is-open" : ""
+        }`}
+        aria-hidden={!isOpen}
+      >
+        {isOpen && (
+          <>
+            <header className="admin-drawer-header">
+              <div>
+                <span>{employee ? "Gestion du membre" : "Nouveau membre"}</span>
+                <h2>
+                  {employee ? employee.fullName : "Ajouter à l’équipe"}
+                </h2>
+              </div>
+              <button type="button" onClick={onClose} aria-label="Fermer">
+                ×
+              </button>
+            </header>
+
+            <form className="admin-employee-form" onSubmit={onSubmit}>
+              <div className="admin-employee-field">
+                <label htmlFor="employee-full-name">Nom complet</label>
+                <input
+                  id="employee-full-name"
+                  name="fullName"
+                  type="text"
+                  value={form.fullName}
+                  onChange={onChange}
+                  autoComplete="name"
+                  required
+                />
+              </div>
+
+              <div className="admin-employee-field">
+                <label htmlFor="employee-email">Adresse e-mail</label>
+                <input
+                  id="employee-email"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={onChange}
+                  autoComplete="email"
+                  required
+                />
+              </div>
+
+              <div className="admin-employee-field">
+                <label htmlFor="employee-phone">Téléphone</label>
+                <input
+                  id="employee-phone"
+                  name="phone"
+                  type="tel"
+                  value={form.phone}
+                  onChange={onChange}
+                  autoComplete="tel"
+                  required
+                />
+              </div>
+
+              <div className="admin-employee-field">
+                <label htmlFor="employee-role">Rôle</label>
+                <select
+                  id="employee-role"
+                  name="role"
+                  value={form.role}
+                  onChange={onChange}
+                >
+                  <option value="reservation_agent">
+                    Agent de réservation
+                  </option>
+                  <option value="manager">Manager</option>
+                </select>
+              </div>
+
+              {message.text && (
+                <p className={`admin-action-message ${message.type}`}>
+                  {message.text}
+                </p>
+              )}
+
+              {temporaryPin && (
+                <div className="admin-temporary-pin">
+                  <span>Code PIN temporaire</span>
+                  <strong>{temporaryPin}</strong>
+                  <p>
+                    Copiez ce code maintenant. Il ne sera plus affiché après
+                    fermeture de cette fenêtre.
+                  </p>
+                  <button type="button" onClick={onCopyPin}>
+                    Copier le PIN
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="admin-save-status"
+                disabled={isSaving}
+              >
+                {isSaving
+                  ? "Enregistrement..."
+                  : employee
+                    ? "Enregistrer les modifications"
+                    : "Créer le membre"}
+              </button>
+            </form>
+
+            {employee && (
+              <div className="admin-employee-security">
+                <span className="admin-detail-label">Accès et sécurité</span>
+
+                <div className="admin-employee-security-row">
+                  <div>
+                    <strong>
+                      {employee.isActive ? "Compte actif" : "Compte désactivé"}
+                    </strong>
+                    <p>
+                      {employee.isActive
+                        ? "Ce membre peut utiliser son accès personnel à l’espace employé."
+                        : "L’accès de ce membre est actuellement bloqué."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onStatusChange(employee)}
+                    disabled={isUpdatingStatus}
+                  >
+                    {isUpdatingStatus
+                      ? "Modification..."
+                      : employee.isActive
+                        ? "Désactiver"
+                        : "Activer"}
+                  </button>
+                </div>
+
+                <div className="admin-employee-security-row">
+                  <div>
+                    <strong>Code PIN</strong>
+                    <p>
+                      Générez un nouveau code temporaire si l’employé a perdu
+                      son accès.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onResetPin}
+                    disabled={isResettingPin}
+                  >
+                    {isResettingPin ? "Génération..." : "Réinitialiser"}
+                  </button>
+                </div>
+
+                <div className="admin-employee-security-row is-static">
+                  <div>
+                    <strong>Dernière connexion</strong>
+                    <p>{formatDateTime(employee.lastLoginAt)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </aside>
+    </>
   );
 }
 

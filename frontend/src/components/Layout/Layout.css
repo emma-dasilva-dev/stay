@@ -1,68 +1,115 @@
 .app-shell {
   min-height: 100vh;
-  background: #d8d4ce;
   padding: 32px;
+
+  background: #d8d4ce;
+
   font-family: Arial, sans-serif;
 }
 
 .site-canvas {
   position: relative;
+
   min-height: calc(100vh - 64px);
-  background: #f3f1ee;
-  border-radius: 22px;
+
   overflow: hidden;
+
+  border-radius: 22px;
+
+  background: #f3f1ee;
+
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
 }
 
+
+/* =======================================================
+   HEADER
+======================================================= */
+
 .site-header {
   position: absolute;
+
   top: 0;
-  left: 0;
   right: 0;
+  left: 0;
+
   height: 88px;
-  padding: 0 48px;
+
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+
+  grid-template-columns:
+    1fr
+    auto
+    1fr;
+
   align-items: center;
+
+  padding: 0 48px;
+
   border-bottom: 1px solid rgba(17, 20, 24, 0.08);
+
   z-index: 100;
 }
 
+
+/* =======================================================
+   DESKTOP NAVIGATION
+======================================================= */
+
 .header-navigation {
   grid-column: 2;
+
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.menu-button {
-  width: 34px;
-  height: 34px;
-  margin-right: 60px;
-  grid-column: 3;
-  justify-self: end;
 
-  border: none;
-  padding: 0;
-  background: transparent;
+/* =======================================================
+   HAMBURGER BUTTON
+======================================================= */
+
+.menu-button {
+  grid-column: 3;
+
+  width: 44px;
+  height: 44px;
 
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: flex-end;
+  justify-content: center;
+
+  justify-self: end;
+
   gap: 4px;
 
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
   cursor: pointer;
+
+  transform: none;
 }
 
-
-
 .menu-button span {
+  display: block;
+
   width: 15px;
   height: 1.4px;
-  background: #111418;
+
   border-radius: 20px;
-  transition: background-color 200ms ease, box-shadow 200ms ease, width 200ms ease;
+
+  background: #111418;
+
+  transition:
+    background-color 200ms ease,
+    box-shadow 200ms ease,
+    width 200ms ease;
 }
 
 .menu-button span:nth-child(2) {
@@ -77,171 +124,149 @@
   width: 15px;
 }
 
-/* Above 768px the header floats transparently over the About hero
-   photo, so the bars need a light fill and a soft shadow to read
-   regardless of the image underneath. Below 768px the header sits on
-   its own opaque bar (see the mobile block further down), where the
-   default dark bars already have plenty of contrast. */ 
+
+/* =======================================================
+   PAGE CONTENT
+======================================================= */
 
 .page-content {
   min-height: calc(100vh - 64px);
 }
 
-.site-header > .menu-button{
 
-
-    transform:translateX(-90px);
-
-
-}
-
-/* White header elements only on the Booking page */
+/* =======================================================
+   BOOKING THEME
+======================================================= */
 
 .booking-theme .logo {
   color: #ffffff;
 }
 
 .booking-theme .logo-wordmark {
-    color: white !important;
+  color: #ffffff !important;
 }
+
 
 /* =======================================================
    TABLET
 ======================================================= */
 
-
 @media (max-width: 1024px) {
-
-
-  .app-shell{
-    padding:20px;
+  .app-shell {
+    padding: 20px;
   }
 
+  .site-header {
+    top: 28px;
+    right: 28px;
+    left: 28px;
 
-  .site-header{
-    top:28px;
-    left:28px;
-    right:28px;
+    border-bottom: 1px solid rgba(17, 20, 24, 0.08);
   }
 
-
-  .page-content{
-    min-height:auto;
+  .page-content {
+    min-height: auto;
   }
 
-
+  .booking-theme .site-header .logo-wordmark {
+    color: #111418 !important;
+  }
 }
-
-
 
 
 /* =======================================================
    MOBILE
 ======================================================= */
 
+@media (max-width: 768px) {
+  .app-shell {
+    padding: 0;
 
-@media (max-width:768px){
-
-
-  .app-shell{
-
-
-    padding:0;
-
-
-    background:#f3f1ee;
+    background: #f3f1ee;
   }
 
+  .site-canvas {
+    min-height: 100vh;
 
-  .site-canvas{
-
-
-    border-radius:0;
-
-
-    min-height:100vh;
+    border-radius: 0;
   }
-
 
   .site-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 78px;
-  padding: 0 22px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  background: rgba(243, 241, 238, 0.96);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(17, 20, 24, 0.08);
-  z-index: 200;
-}
+    position: fixed;
 
-.header-navigation {
-  display: none;
-}
+    top: 0;
+    right: 0;
+    left: 0;
 
+    height: 78px;
 
-.menu-button {
-  grid-column: 2;
-  justify-self: end;
-}
+    display: grid;
 
-  .page-content {
-  padding-top: 78px;
-  padding-bottom: 24px;
-  min-height: 100vh;
-}
+    grid-template-columns:
+      minmax(0, 1fr)
+      44px;
 
-}
-
-@media (max-width: 768px) {
-  .menu-button {
-    width: 44px;
-    height: 44px;
-    margin-right: -8px;
     align-items: center;
+
+    padding: 0 22px;
+
+    border-bottom: 1px solid rgba(17, 20, 24, 0.08);
+
+    background: rgba(243, 241, 238, 0.96);
+
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    z-index: 200;
   }
 
+  .header-navigation {
+    display: none;
+  }
+
+  .menu-button {
+    grid-column: 2;
+
+    width: 44px;
+    height: 44px;
+
+    justify-self: end;
+
+    align-items: flex-end;
+
+    margin: 0;
+    padding: 0;
+
+    transform: none;
+  }
 
   .menu-button span {
     width: 18px;
     height: 1.5px;
+
     background: #111418;
   }
-
 
   .menu-button span:nth-child(2) {
     width: 13px;
   }
 
-
   .menu-button span:nth-child(3) {
     width: 18px;
   }
-}
 
-/* Header divider — tablet and mobile only */
+  .page-content {
+    min-height: 100vh;
 
-
-@media (max-width: 1024px) {
-  .site-header {
-    border-bottom: 1px solid rgba(17, 20, 24, 0.08);
+    padding-top: 78px;
+    padding-bottom: 24px;
   }
 }
 
-@media (max-width: 1024px) {
-  .booking-theme .site-header .logo-wordmark {
-    color: #111418 !important;
-  }
-}
 
 /* =======================================================
    RESPONSIVE HEADER VISIBILITY
 ======================================================= */
-
 
 @media (min-width: 1025px) {
   .menu-button {
@@ -252,26 +277,38 @@
 @media (min-width: 769px) and (max-width: 1024px) {
   .site-header {
     height: 80px;
-    padding: 0 28px;
-    grid-template-columns: auto 1fr auto;
-  }
 
+    padding: 0 28px;
+
+    grid-template-columns:
+      auto
+      1fr
+      auto;
+  }
 
   .header-navigation {
     grid-column: 2;
   }
 
-
   .menu-button {
     grid-column: 3;
+
     display: flex;
+
+    margin: 0;
+
+    transform: none;
   }
 }
+
+
+/* =======================================================
+   ABOUT PAGE
+======================================================= */
 
 .about-theme {
   overflow: visible;
 }
-
 
 .about-theme .page-content {
   min-height: 100vh;

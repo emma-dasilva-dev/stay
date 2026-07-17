@@ -58,12 +58,9 @@ function Destinations() {
           INTRO
       ====================================================== */}
       <section className="destinations-intro">
-        <div className="destinations-intro-meta">
-          <span>02 / DESTINATIONS</span>
-          <span>
-            {String(destinations.length).padStart(2, "0")} lieux sélectionnés
-          </span>
-        </div>
+       <div className="destinations-intro-meta">
+  <span>02 / DESTINATIONS</span>
+</div>
 
 
         <div className="destinations-intro-content">

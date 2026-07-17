@@ -464,33 +464,18 @@ function Booking() {
         ========================================== */}
 
 
-        <section className="booking-visual">
-          <div className="booking-visual-top">
-            <span className="booking-kicker">
-              03 / RÉSERVATION
-            </span>
+       <section className="booking-visual">
+  <span className="booking-page-index">
+    03 / RÉSERVATION
+  </span>
 
+  <div className="booking-editorial">
+    <h1>
+      Réserver
+      <span>autrement.</span>
+    </h1>
+  </div>
 
-            <span className="booking-visual-category">
-              {selectedDestination.category ||
-                "Séjour sélectionné"}
-            </span>
-          </div>
-
-
-          <div className="booking-editorial">
-            <h1>
-              Réserver
-              <span>autrement.</span>
-            </h1>
-
-
-            <p>
-              Quelques détails suffisent pour commencer.
-              STAY vous recontactera ensuite pour confirmer
-              la disponibilité et finaliser votre séjour.
-            </p>
-          </div>
 
 
           <div className="booking-visual-image">
@@ -534,29 +519,17 @@ function Booking() {
         </section>
 
 
-        {/* =========================================
-            RIGHT SIDE
-        ========================================== */}
+
+{/* =========================================
+    RIGHT SIDE
+========================================== */}
 
 
-        <section className="booking-panel">
-          <div className="booking-panel-header">
-            <div>
-              <span className="booking-panel-number">
-                Votre demande
-              </span>
+<section className="booking-panel">
+  <div className="booking-panel-header">
+    <h2>Votre séjour.</h2>
+  </div>
 
-
-              <h2>Préparez votre séjour.</h2>
-            </div>
-
-
-            <div className="booking-progress">
-              <span className="is-complete" />
-              <span className="is-active" />
-              <span />
-            </div>
-          </div>
 
 
           {/* =========================================
@@ -571,11 +544,6 @@ function Booking() {
 
               <div>
                 <h3>Destination</h3>
-
-
-                <p>
-                  Sélectionnez le lieu qui vous ressemble.
-                </p>
               </div>
             </div>
 
@@ -643,14 +611,9 @@ function Booking() {
                 <span>02</span>
 
 
-                <div>
-                  <h3>Votre séjour</h3>
-
-
-                  <p>
-                    Indiquez les dates et les voyageurs.
-                  </p>
-                </div>
+               <div>
+  <h3>Dates & voyageurs</h3>
+</div>
               </div>
 
 
@@ -782,13 +745,7 @@ function Booking() {
 
 
                 <div>
-                  <h3>Vos coordonnées</h3>
-
-
-                  <p>
-                    Pour vous recontacter et confirmer
-                    votre demande.
-                  </p>
+                  <h3>Coordonnées</h3>
                 </div>
               </div>
 
@@ -998,7 +955,7 @@ function Booking() {
           </form>
         </section>
       </div>
-    </main>
+    </main> 
   );
 }
 

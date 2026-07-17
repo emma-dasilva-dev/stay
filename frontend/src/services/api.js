@@ -1,16 +1,15 @@
 /*
-  In production, VITE_API_URL must be set explicitly (a real API domain).
-  In local dev, when it's left unset, the API is assumed to be the same
-  machine that served this page, on port 5000 — so this automatically
-  works from the laptop (localhost) and from a phone on the same Wi-Fi
-  (whatever LAN IP the page was loaded from), with no IP hardcoded here.
-*/
+ * In production, VITE_API_URL must be set explicitly to the real API domain.
+ * In local development, when it is left unset, the API is assumed to be on
+ * the same machine that served the page, on port 5000. This works from the
+ * laptop and from another device on the same local network without hardcoding
+ * a development IP address.
+ */
 const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   `http://${window.location.hostname}:5000/api`;
 
 const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
-
 const TOKEN_KEY = "stay_access_token";
 const USER_KEY = "stay_user";
 
@@ -40,7 +39,17 @@ export function getToken() {
 
 export function getStoredUser() {
   const raw = localStorage.getItem(USER_KEY);
-  return raw ? JSON.parse(raw) : null;
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    clearSession();
+    return null;
+  }
 }
 
 export function saveSession(token, user) {
@@ -55,7 +64,6 @@ export function clearSession() {
 
 async function request(path, { method = "GET", body } = {}) {
   const token = getToken();
-
   const headers = {};
 
   if (body !== undefined) {
@@ -95,9 +103,17 @@ async function request(path, { method = "GET", body } = {}) {
 
 export const authApi = {
   register: (payload) =>
-    request("/auth/register", { method: "POST", body: payload }),
+    request("/auth/register", {
+      method: "POST",
+      body: payload,
+    }),
+
   login: (payload) =>
-    request("/auth/login", { method: "POST", body: payload }),
+    request("/auth/login", {
+      method: "POST",
+      body: payload,
+    }),
+
   me: () => request("/auth/me"),
 };
 
@@ -107,12 +123,17 @@ export const destinationsApi = {
 
 export const bookingsApi = {
   create: (payload) =>
-    request("/bookings", { method: "POST", body: payload }),
+    request("/bookings", {
+      method: "POST",
+      body: payload,
+    }),
+
   myBookings: () => request("/bookings/my-bookings"),
 };
 
 export const adminApi = {
   stats: () => request("/admin/stats"),
+
   bookings: ({ status, search } = {}) => {
     const query = new URLSearchParams();
 
@@ -130,10 +151,37 @@ export const adminApi = {
       `/admin/bookings${queryString ? `?${queryString}` : ""}`,
     );
   },
+
   updateBookingStatus: (bookingId, status) =>
     request(`/admin/bookings/${bookingId}/status`, {
       method: "PATCH",
       body: { status },
     }),
+
   customers: () => request("/admin/customers"),
+
+  employees: () => request("/admin/employees"),
+
+  createEmployee: (payload) =>
+    request("/admin/employees", {
+      method: "POST",
+      body: payload,
+    }),
+
+  updateEmployee: (employeeId, payload) =>
+    request(`/admin/employees/${employeeId}`, {
+      method: "PUT",
+      body: payload,
+    }),
+
+  updateEmployeeStatus: (employeeId, isActive) =>
+    request(`/admin/employees/${employeeId}/status`, {
+      method: "PATCH",
+      body: { isActive },
+    }),
+
+  resetEmployeePin: (employeeId) =>
+    request(`/admin/employees/${employeeId}/reset-pin`, {
+      method: "POST",
+    }),
 };
