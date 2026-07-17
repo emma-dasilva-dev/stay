@@ -33,15 +33,21 @@ CREATE TABLE IF NOT EXISTS destinations (
   name VARCHAR(160) NOT NULL,
   slug VARCHAR(170) NOT NULL UNIQUE,
   location VARCHAR(120) NOT NULL,
+  short_description TEXT NULL,
+  category VARCHAR(80) NULL,
   starting_price_fcfa INT UNSIGNED NOT NULL,
   image_path VARCHAR(255) NOT NULL,
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     ON UPDATE CURRENT_TIMESTAMP,
 
+
   INDEX idx_destinations_slug (slug),
-  INDEX idx_destinations_active (is_active)
+  INDEX idx_destinations_active (is_active),
+  INDEX idx_destinations_featured (is_featured),
+  INDEX idx_destinations_category (category)
 ) ENGINE=InnoDB;
 
 

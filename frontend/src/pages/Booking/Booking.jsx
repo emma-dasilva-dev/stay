@@ -12,7 +12,7 @@ const CONTACT = {
 
 
 function formatFcfa(amount) {
-  return new Intl.NumberFormat("fr-FR").format(amount);
+  return new Intl.NumberFormat("fr-FR").format(amount || 0);
 }
 
 
@@ -40,8 +40,7 @@ function calculateNights(checkIn, checkOut) {
   const departure = new Date(`${checkOut}T00:00:00`);
 
 
-  const difference =
-    departure.getTime() - arrival.getTime();
+  const difference = departure.getTime() - arrival.getTime();
 
 
   return difference > 0
@@ -53,6 +52,7 @@ function calculateNights(checkIn, checkOut) {
 function Booking() {
   const [searchParams] = useSearchParams();
 
+
   const {
     destinations,
     isLoading: isLoadingDestinations,
@@ -60,8 +60,9 @@ function Booking() {
     reload: reloadDestinations,
   } = useDestinations();
 
-  const destinationFromUrl =
-    searchParams.get("destination");
+
+  const destinationFromUrl = searchParams.get("destination");
+
 
   const [formData, setFormData] = useState({
     destinationId: "",
@@ -77,35 +78,38 @@ function Booking() {
 
 
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState({
+    type: "",
+    text: "",
+  });
 
-
-  const [submissionMessage, setSubmissionMessage] =
-    useState({
-      type: "",
-      text: "",
-    });
 
   useEffect(() => {
     if (destinations.length === 0 || formData.destinationId) {
       return;
     }
 
+
     const matchesUrl = destinations.some(
       (destination) =>
         destination.id === Number(destinationFromUrl),
     );
 
+
     setFormData((currentData) => ({
       ...currentData,
       destinationId: matchesUrl
-        ? destinationFromUrl
+        ? String(destinationFromUrl)
         : String(destinations[0].id),
     }));
-  }, [destinations, destinationFromUrl, formData.destinationId]);
+  }, [
+    destinations,
+    destinationFromUrl,
+    formData.destinationId,
+  ]);
 
 
   const selectedDestination = useMemo(() => {
@@ -126,9 +130,9 @@ function Booking() {
 
   const estimatedTotal = selectedDestination
     ? numberOfNights > 0
-      ? selectedDestination.startingPriceFcfaFcfa *
+      ? selectedDestination.startingPriceFcfa *
         numberOfNights
-      : selectedDestination.startingPriceFcfaFcfa
+      : selectedDestination.startingPriceFcfa
     : 0;
 
 
@@ -258,13 +262,9 @@ function Booking() {
   };
 
 
-  const saveBookingRequest = async (
-    contactMethod,
-  ) => {
+  const saveBookingRequest = async (contactMethod) => {
     const data = await bookingsApi.create({
-      destinationId: Number(
-        formData.destinationId,
-      ),
+      destinationId: Number(formData.destinationId),
       fullName: formData.fullName.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
@@ -272,8 +272,7 @@ function Booking() {
       checkOut: formData.checkOut,
       adults: Number(formData.adults),
       children: Number(formData.children),
-      specialRequest:
-        formData.specialRequest.trim(),
+      specialRequest: formData.specialRequest.trim(),
       contactMethod,
     });
 
@@ -282,9 +281,7 @@ function Booking() {
   };
 
 
-  const createWhatsAppMessage = (
-    bookingReference,
-  ) => {
+  const createWhatsAppMessage = (bookingReference) => {
     const specialRequest =
       formData.specialRequest.trim() ||
       "Aucune demande particulière";
@@ -346,9 +343,7 @@ function Booking() {
 
 
       const message = encodeURIComponent(
-        createWhatsAppMessage(
-          booking.reference,
-        ),
+        createWhatsAppMessage(booking.reference),
       );
 
 
@@ -402,7 +397,8 @@ function Booking() {
       });
 
 
-      window.location.href = `tel:${CONTACT.callNumber}`;
+      window.location.href =
+        `tel:${CONTACT.callNumber}`;
     } catch (error) {
       setSubmissionMessage({
         type: "error",
@@ -418,523 +414,215 @@ function Booking() {
 
   if (isLoadingDestinations) {
     return (
-      <section className="booking-page">
-        <div className="stay-state">
-          <span className="stay-loader"></span>
+      <main className="booking-page booking-page-state">
+        <div className="booking-state">
+          <span className="booking-state-loader" />
           <p>Chargement des destinations...</p>
         </div>
-      </section>
+      </main>
     );
   }
+
 
   if (destinationsError) {
     return (
-      <section className="booking-page">
-        <div className="stay-state">
+      <main className="booking-page booking-page-state">
+        <div className="booking-state">
           <p>{destinationsError}</p>
-          <button type="button" onClick={reloadDestinations}>
+
+
+          <button
+            type="button"
+            onClick={reloadDestinations}
+          >
             Réessayer
           </button>
         </div>
-      </section>
+      </main>
     );
   }
+
 
   if (!selectedDestination) {
     return (
-      <section className="booking-page">
-        <div className="stay-state">
-          <p>Aucune destination n’est disponible pour le moment.</p>
+      <main className="booking-page booking-page-state">
+        <div className="booking-state">
+          <p>
+            Aucune destination n’est disponible pour le moment.
+          </p>
         </div>
-      </section>
+      </main>
     );
   }
 
+
   return (
-    <section className="booking-page">
-      <div
-        className="booking-background"
-        style={{
-          backgroundImage: `url("${selectedDestination.image}")`,
-        }}
-      />
+    <main className="booking-page">
+      <div className="booking-shell">
+        {/* =========================================
+            LEFT SIDE
+        ========================================== */}
 
 
-      <div className="booking-overlay" />
+        <section className="booking-visual">
+          <div className="booking-visual-top">
+            <span className="booking-kicker">
+              03 / RÉSERVATION
+            </span>
 
 
-      {/* =====================================================
-          MOBILE + TABLET
-      ===================================================== */}
+            <span className="booking-visual-category">
+              {selectedDestination.category ||
+                "Séjour sélectionné"}
+            </span>
+          </div>
 
 
-      <div className="booking-mobile-layout">
-        <header className="booking-mobile-header">
-          <span className="booking-mobile-eyebrow">
-            Réservation
-          </span>
+          <div className="booking-editorial">
+            <h1>
+              Réserver
+              <span>autrement.</span>
+            </h1>
 
 
-          <h1>Finalisez votre séjour</h1>
+            <p>
+              Quelques détails suffisent pour commencer.
+              STAY vous recontactera ensuite pour confirmer
+              la disponibilité et finaliser votre séjour.
+            </p>
+          </div>
 
 
-          <p>
-            Choisissez votre destination et préparez
-            votre demande de réservation.
-          </p>
-        </header>
-
-
-        <div className="booking-destination-selector">
-          {destinations.map((destination) => {
-            const isSelected =
-              Number(formData.destinationId) ===
-              destination.id;
-
-
-            return (
-              <button
-                key={destination.id}
-                type="button"
-                className={`booking-destination-option ${
-                  isSelected ? "is-selected" : ""
-                }`}
-                onClick={() =>
-                  handleDestinationSelect(
-                    destination.id,
-                  )
-                }
-                aria-pressed={isSelected}
-              >
-                <img
-                  src={destination.image}
-                  alt={destination.name}
-                />
-
-
-                <span>{destination.name}</span>
-              </button>
-            );
-          })}
-        </div>
-
-
-        <article className="booking-selected-destination">
-          <div className="booking-selected-image">
+          <div className="booking-visual-image">
             <img
               src={selectedDestination.image}
               alt={selectedDestination.name}
             />
+
+
+            <div className="booking-visual-gradient" />
+
+
+            <div className="booking-image-content">
+              <div>
+                <span>Votre destination</span>
+
+
+                <h2>{selectedDestination.name}</h2>
+
+
+                <p>{selectedDestination.location}</p>
+              </div>
+
+
+              <div className="booking-image-price">
+                <span>À partir de</span>
+
+
+                <strong>
+                  {formatFcfa(
+                    selectedDestination.startingPriceFcfa,
+                  )}{" "}
+                  FCFA
+                </strong>
+
+
+                <small>/ nuit</small>
+              </div>
+            </div>
           </div>
+        </section>
 
 
-          <div className="booking-selected-info">
+        {/* =========================================
+            RIGHT SIDE
+        ========================================== */}
+
+
+        <section className="booking-panel">
+          <div className="booking-panel-header">
             <div>
-              <span className="booking-selected-label">
-                Votre destination
+              <span className="booking-panel-number">
+                Votre demande
               </span>
 
 
-              <h2>
-                {selectedDestination.name}
-              </h2>
-
-
-              <p>
-                {selectedDestination.location}
-              </p>
+              <h2>Préparez votre séjour.</h2>
             </div>
 
 
-            <div className="booking-selected-price">
-              <span>À partir de</span>
-
-
-              <strong>
-                {formatFcfa(
-                  selectedDestination.startingPriceFcfa,
-                )}{" "}
-                FCFA
-              </strong>
-
-
-              <small>/ nuit</small>
+            <div className="booking-progress">
+              <span className="is-complete" />
+              <span className="is-active" />
+              <span />
             </div>
           </div>
-        </article>
 
 
-        <form
-          className="booking-mobile-form"
-          onSubmit={(event) =>
-            event.preventDefault()
-          }
-          noValidate
-        >
-          <section className="booking-mobile-section">
-            <div className="booking-mobile-section-heading">
-              <span>Votre séjour</span>
+          {/* =========================================
+              DESTINATION SELECTOR
+          ========================================== */}
 
 
-              <p>
-                Indiquez vos dates et le nombre de
-                voyageurs.
-              </p>
-            </div>
+          <div className="booking-destination-block">
+            <div className="booking-section-heading">
+              <span>01</span>
 
 
-            <div className="booking-trip-grid">
-              <div className="booking-mobile-field">
-                <label htmlFor="mobileCheckIn">
-                  Arrivée
-                </label>
+              <div>
+                <h3>Destination</h3>
 
 
-                <input
-                  id="mobileCheckIn"
-                  name="checkIn"
-                  type="date"
-                  min={today}
-                  value={formData.checkIn}
-                  onChange={handleChange}
-                />
-
-
-                {errors.checkIn && (
-                  <span className="field-error">
-                    {errors.checkIn}
-                  </span>
-                )}
-              </div>
-
-
-              <div className="booking-mobile-field">
-                <label htmlFor="mobileCheckOut">
-                  Départ
-                </label>
-
-
-                <input
-                  id="mobileCheckOut"
-                  name="checkOut"
-                  type="date"
-                  min={
-                    formData.checkIn || today
-                  }
-                  value={formData.checkOut}
-                  onChange={handleChange}
-                />
-
-
-                {errors.checkOut && (
-                  <span className="field-error">
-                    {errors.checkOut}
-                  </span>
-                )}
-              </div>
-
-
-              {errors.dates && (
-                <p className="form-wide-error">
-                  {errors.dates}
+                <p>
+                  Sélectionnez le lieu qui vous ressemble.
                 </p>
-              )}
-
-
-              <div className="booking-mobile-field">
-                <label htmlFor="mobileAdults">
-                  Adultes
-                </label>
-
-
-                <select
-                  id="mobileAdults"
-                  name="adults"
-                  value={formData.adults}
-                  onChange={handleChange}
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(
-                    (number) => (
-                      <option
-                        key={number}
-                        value={number}
-                      >
-                        {number}
-                      </option>
-                    ),
-                  )}
-                </select>
-
-
-                {errors.adults && (
-                  <span className="field-error">
-                    {errors.adults}
-                  </span>
-                )}
-              </div>
-
-
-              <div className="booking-mobile-field">
-                <label htmlFor="mobileChildren">
-                  Enfants
-                </label>
-
-
-                <select
-                  id="mobileChildren"
-                  name="children"
-                  value={formData.children}
-                  onChange={handleChange}
-                >
-                  {[0, 1, 2, 3, 4, 5, 6].map(
-                    (number) => (
-                      <option
-                        key={number}
-                        value={number}
-                      >
-                        {number}
-                      </option>
-                    ),
-                  )}
-                </select>
               </div>
             </div>
-          </section>
 
 
-          <section className="booking-mobile-section">
-            <div className="booking-mobile-section-heading">
-              <span>Vos coordonnées</span>
+            <div className="booking-destination-selector">
+              {destinations.map((destination) => {
+                const isSelected =
+                  Number(formData.destinationId) ===
+                  destination.id;
 
 
-              <p>
-                Ces informations permettront à STAY de
-                vous recontacter.
-              </p>
+                return (
+                  <button
+                    key={destination.id}
+                    type="button"
+                    className={
+                      isSelected
+                        ? "booking-destination-option is-selected"
+                        : "booking-destination-option"
+                    }
+                    onClick={() =>
+                      handleDestinationSelect(
+                        destination.id,
+                      )
+                    }
+                    aria-pressed={isSelected}
+                  >
+                    <img
+                      src={destination.image}
+                      alt=""
+                    />
+
+
+                    <span>
+                      {destination.name}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
 
-            <div className="booking-mobile-contact-grid">
-              <div className="booking-mobile-field booking-mobile-field-wide">
-                <label htmlFor="mobileFullName">
-                  Nom complet
-                </label>
-
-
-                <input
-                  id="mobileFullName"
-                  name="fullName"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Votre nom complet"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                />
-
-
-                {errors.fullName && (
-                  <span className="field-error">
-                    {errors.fullName}
-                  </span>
-                )}
-              </div>
-
-
-              <div className="booking-mobile-field">
-                <label htmlFor="mobilePhone">
-                  Téléphone
-                </label>
-
-
-                <input
-                  id="mobilePhone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="+229..."
-                  value={formData.phone}
-                  onChange={handleChange}
-                />
-
-
-                {errors.phone && (
-                  <span className="field-error">
-                    {errors.phone}
-                  </span>
-                )}
-              </div>
-
-
-              <div className="booking-mobile-field">
-                <label htmlFor="mobileEmail">
-                  Adresse e-mail
-                </label>
-
-
-                <input
-                  id="mobileEmail"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="nom@exemple.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-
-
-                {errors.email && (
-                  <span className="field-error">
-                    {errors.email}
-                  </span>
-                )}
-              </div>
-
-
-              <div className="booking-mobile-field booking-mobile-field-wide">
-                <label htmlFor="mobileSpecialRequest">
-                  Demande particulière
-                  <span> — facultatif</span>
-                </label>
-
-
-                <textarea
-                  id="mobileSpecialRequest"
-                  name="specialRequest"
-                  rows="3"
-                  placeholder="Transport, arrivée tardive, chambre particulière..."
-                  value={
-                    formData.specialRequest
-                  }
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-          </section>
-
-
-          <section className="booking-mobile-summary">
-            <div>
-              <span>Durée</span>
-
-
-              <strong>
-                {numberOfNights > 0
-                  ? `${numberOfNights} nuitée${
-                      numberOfNights > 1
-                        ? "s"
-                        : ""
-                    }`
-                  : "À déterminer"}
-              </strong>
-            </div>
-
-
-            <div>
-              <span>Estimation</span>
-
-
-              <strong>
-                {numberOfNights > 0
-                  ? `${formatFcfa(
-                      estimatedTotal,
-                    )} FCFA`
-                  : `À partir de ${formatFcfa(
-                      selectedDestination.startingPriceFcfa,
-                    )} FCFA`}
-              </strong>
-            </div>
-          </section>
-
-
-          <p className="booking-disclaimer">
-            Les tarifs sont indicatifs. STAY confirmera
-            la disponibilité et le montant final.
-          </p>
-
-
-          {submissionMessage.text && (
-            <p
-              className={`booking-submit-message ${submissionMessage.type}`}
-              role="status"
-            >
-              {submissionMessage.text}
-            </p>
-          )}
-
-
-          <div className="booking-mobile-actions">
-            <button
-              type="button"
-              className="booking-mobile-whatsapp"
-              onClick={handleWhatsApp}
-              disabled={isSubmitting}
-            >
-              {isSubmitting
-                ? "Enregistrement..."
-                : "Continuer sur WhatsApp"}
-            </button>
-
-
-            <button
-              type="button"
-              className="booking-mobile-call"
-              onClick={handleCall}
-              disabled={isSubmitting}
-            >
-              ou appeler STAY
-            </button>
-          </div>
-        </form>
-      </div>
-
-
-      {/* =====================================================
-          DESKTOP — EXISTING DESIGN
-      ===================================================== */}
-
-
-      <div className="booking-desktop-layout">
-        <header className="booking-header">
-          <h1>
-            <span aria-hidden="true">|</span>
-            Réservez votre séjour
-          </h1>
-        </header>
-
-
-        <div className="booking-content">
-          <div
-  className="destination-preview"
-  style={{
-    "--booking-preview-image": `url("${selectedDestination.image}")`,
-  }}
->
-            <span className="preview-label">
-              Votre destination
-            </span>
-
-
-            <h2>
-              {selectedDestination.name}
-            </h2>
-
-
-            <p>
-              {selectedDestination.location}
-            </p>
-
-
-            <div className="preview-price">
-              <span>À partir de</span>
-
-
-              <strong>
-                {formatFcfa(
-                  selectedDestination.startingPriceFcfa,
-                )}{" "}
-                FCFA / nuit
-              </strong>
-            </div>
+            {errors.destinationId && (
+              <span className="field-error">
+                {errors.destinationId}
+              </span>
+            )}
           </div>
 
 
@@ -945,284 +633,328 @@ function Booking() {
             }
             noValidate
           >
-            <div className="form-heading">
-              <span>Votre demande</span>
+            {/* =========================================
+                STAY DETAILS
+            ========================================== */}
 
 
-              <p>
-                Renseignez les informations
-                nécessaires pour préparer votre
-                séjour.
-              </p>
-            </div>
+            <section className="booking-form-section">
+              <div className="booking-section-heading">
+                <span>02</span>
 
 
-            <div className="form-grid">
-              <div className="form-field form-field-wide">
-                <label htmlFor="destinationId">
-                  Destination
-                </label>
+                <div>
+                  <h3>Votre séjour</h3>
 
 
-                <select
-                  id="destinationId"
-                  name="destinationId"
-                  value={
-                    formData.destinationId
-                  }
-                  onChange={handleChange}
-                >
-                  {destinations.map(
-                    (destination) => (
-                      <option
-                        key={destination.id}
-                        value={destination.id}
-                      >
-                        {destination.name}
-                      </option>
-                    ),
+                  <p>
+                    Indiquez les dates et les voyageurs.
+                  </p>
+                </div>
+              </div>
+
+
+              <div className="booking-form-grid">
+                <div className="booking-field">
+                  <label htmlFor="checkIn">
+                    Arrivée
+                  </label>
+
+
+                  <input
+                    id="checkIn"
+                    name="checkIn"
+                    type="date"
+                    min={today}
+                    value={formData.checkIn}
+                    onChange={handleChange}
+                  />
+
+
+                  {errors.checkIn && (
+                    <span className="field-error">
+                      {errors.checkIn}
+                    </span>
                   )}
-                </select>
+                </div>
 
 
-                {errors.destinationId && (
-                  <span className="field-error">
-                    {errors.destinationId}
-                  </span>
-                )}
-              </div>
+                <div className="booking-field">
+                  <label htmlFor="checkOut">
+                    Départ
+                  </label>
 
 
-              <div className="form-field">
-                <label htmlFor="checkIn">
-                  Date d’arrivée
-                </label>
+                  <input
+                    id="checkOut"
+                    name="checkOut"
+                    type="date"
+                    min={formData.checkIn || today}
+                    value={formData.checkOut}
+                    onChange={handleChange}
+                  />
 
 
-                <input
-                  id="checkIn"
-                  name="checkIn"
-                  type="date"
-                  min={today}
-                  value={formData.checkIn}
-                  onChange={handleChange}
-                />
-
-
-                {errors.checkIn && (
-                  <span className="field-error">
-                    {errors.checkIn}
-                  </span>
-                )}
-              </div>
-
-
-              <div className="form-field">
-                <label htmlFor="checkOut">
-                  Date de départ
-                </label>
-
-
-                <input
-                  id="checkOut"
-                  name="checkOut"
-                  type="date"
-                  min={
-                    formData.checkIn || today
-                  }
-                  value={formData.checkOut}
-                  onChange={handleChange}
-                />
-
-
-                {errors.checkOut && (
-                  <span className="field-error">
-                    {errors.checkOut}
-                  </span>
-                )}
-              </div>
-
-
-              {errors.dates && (
-                <p className="form-wide-error">
-                  {errors.dates}
-                </p>
-              )}
-
-
-              <div className="form-field">
-                <label htmlFor="adults">
-                  Adultes
-                </label>
-
-
-                <select
-                  id="adults"
-                  name="adults"
-                  value={formData.adults}
-                  onChange={handleChange}
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(
-                    (number) => (
-                      <option
-                        key={number}
-                        value={number}
-                      >
-                        {number}
-                      </option>
-                    ),
+                  {errors.checkOut && (
+                    <span className="field-error">
+                      {errors.checkOut}
+                    </span>
                   )}
-                </select>
+                </div>
 
 
-                {errors.adults && (
-                  <span className="field-error">
-                    {errors.adults}
-                  </span>
+                {errors.dates && (
+                  <p className="form-wide-error">
+                    {errors.dates}
+                  </p>
                 )}
-              </div>
 
 
-              <div className="form-field">
-                <label htmlFor="children">
-                  Enfants
-                </label>
+                <div className="booking-field">
+                  <label htmlFor="adults">
+                    Adultes
+                  </label>
 
 
-                <select
-                  id="children"
-                  name="children"
-                  value={formData.children}
-                  onChange={handleChange}
-                >
-                  {[0, 1, 2, 3, 4, 5, 6].map(
-                    (number) => (
-                      <option
-                        key={number}
-                        value={number}
-                      >
-                        {number}
-                      </option>
-                    ),
+                  <select
+                    id="adults"
+                    name="adults"
+                    value={formData.adults}
+                    onChange={handleChange}
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(
+                      (number) => (
+                        <option
+                          key={number}
+                          value={number}
+                        >
+                          {number}
+                        </option>
+                      ),
+                    )}
+                  </select>
+
+
+                  {errors.adults && (
+                    <span className="field-error">
+                      {errors.adults}
+                    </span>
                   )}
-                </select>
+                </div>
+
+
+                <div className="booking-field">
+                  <label htmlFor="children">
+                    Enfants
+                  </label>
+
+
+                  <select
+                    id="children"
+                    name="children"
+                    value={formData.children}
+                    onChange={handleChange}
+                  >
+                    {[0, 1, 2, 3, 4, 5, 6].map(
+                      (number) => (
+                        <option
+                          key={number}
+                          value={number}
+                        >
+                          {number}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+
+            {/* =========================================
+                CONTACT DETAILS
+            ========================================== */}
+
+
+            <section className="booking-form-section">
+              <div className="booking-section-heading">
+                <span>03</span>
+
+
+                <div>
+                  <h3>Vos coordonnées</h3>
+
+
+                  <p>
+                    Pour vous recontacter et confirmer
+                    votre demande.
+                  </p>
+                </div>
               </div>
 
 
-              <div className="form-field form-field-wide">
-                <label htmlFor="fullName">
-                  Nom complet du réservant
-                </label>
+              <div className="booking-form-grid">
+                <div className="booking-field booking-field-wide">
+                  <label htmlFor="fullName">
+                    Nom complet
+                  </label>
 
 
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Votre nom complet"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                />
+                  <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Votre nom complet"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                  />
 
 
-                {errors.fullName && (
-                  <span className="field-error">
-                    {errors.fullName}
-                  </span>
-                )}
+                  {errors.fullName && (
+                    <span className="field-error">
+                      {errors.fullName}
+                    </span>
+                  )}
+                </div>
+
+
+                <div className="booking-field">
+                  <label htmlFor="phone">
+                    Téléphone
+                  </label>
+
+
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="+229..."
+                    value={formData.phone}
+                    onChange={handleChange}
+                  />
+
+
+                  {errors.phone && (
+                    <span className="field-error">
+                      {errors.phone}
+                    </span>
+                  )}
+                </div>
+
+
+                <div className="booking-field">
+                  <label htmlFor="email">
+                    Adresse e-mail
+                  </label>
+
+
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="nom@exemple.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+
+
+                  {errors.email && (
+                    <span className="field-error">
+                      {errors.email}
+                    </span>
+                  )}
+                </div>
+
+
+                <div className="booking-field booking-field-wide">
+                  <label htmlFor="specialRequest">
+                    Demande particulière
+                    <span> — facultatif</span>
+                  </label>
+
+
+                  <textarea
+                    id="specialRequest"
+                    name="specialRequest"
+                    rows="3"
+                    placeholder="Transport, arrivée tardive, préférence particulière..."
+                    value={formData.specialRequest}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            </section>
+
+
+            {/* =========================================
+                LIVE SUMMARY
+            ========================================== */}
+
+
+            <section className="booking-summary">
+              <div className="booking-summary-heading">
+                <span>Résumé</span>
+
+
+                <span>
+                  {selectedDestination.name}
+                </span>
               </div>
 
 
-              <div className="form-field">
-                <label htmlFor="phone">
-                  Téléphone
-                </label>
+              <div className="booking-summary-grid">
+                <div>
+                  <span>Durée</span>
 
 
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="+229..."
-                  value={formData.phone}
-                  onChange={handleChange}
-                />
+                  <strong>
+                    {numberOfNights > 0
+                      ? `${numberOfNights} nuitée${
+                          numberOfNights > 1
+                            ? "s"
+                            : ""
+                        }`
+                      : "À déterminer"}
+                  </strong>
+                </div>
 
 
-                {errors.phone && (
-                  <span className="field-error">
-                    {errors.phone}
-                  </span>
-                )}
+                <div>
+                  <span>Voyageurs</span>
+
+
+                  <strong>
+                    {formData.adults +
+                      formData.children}
+                  </strong>
+                </div>
+
+
+                <div className="booking-summary-total">
+                  <span>Estimation</span>
+
+
+                  <strong>
+                    {numberOfNights > 0
+                      ? `${formatFcfa(
+                          estimatedTotal,
+                        )} FCFA`
+                      : `Dès ${formatFcfa(
+                          selectedDestination.startingPriceFcfa,
+                        )} FCFA`}
+                  </strong>
+                </div>
               </div>
-
-
-              <div className="form-field">
-                <label htmlFor="email">
-                  Adresse e-mail
-                </label>
-
-
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="nom@exemple.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-
-
-                {errors.email && (
-                  <span className="field-error">
-                    {errors.email}
-                  </span>
-                )}
-              </div>
-            </div>
-
-
-            <div className="booking-summary-line">
-              <div>
-                <span>Durée</span>
-
-
-                <strong>
-                  {numberOfNights > 0
-                    ? `${numberOfNights} nuitée${
-                        numberOfNights > 1
-                          ? "s"
-                          : ""
-                      }`
-                    : "À déterminer"}
-                </strong>
-              </div>
-
-
-              <div>
-                <span>Estimation</span>
-
-
-                <strong>
-                  {numberOfNights > 0
-                    ? `${formatFcfa(
-                        estimatedTotal,
-                      )} FCFA`
-                    : `À partir de ${formatFcfa(
-                        selectedDestination.startingPriceFcfa,
-                      )} FCFA`}
-                </strong>
-              </div>
-            </div>
+            </section>
 
 
             <p className="booking-disclaimer">
-              Les tarifs sont indicatifs. STAY
-              confirmera la disponibilité et le
-              montant final.
+              Les tarifs sont indicatifs. STAY confirmera
+              la disponibilité et le montant final avant
+              toute réservation définitive.
             </p>
 
 
@@ -1239,19 +971,24 @@ function Booking() {
             <div className="booking-actions">
               <button
                 type="button"
-                className="whatsapp-button"
+                className="booking-primary-action"
                 onClick={handleWhatsApp}
                 disabled={isSubmitting}
               >
-                {isSubmitting
-                  ? "Enregistrement..."
-                  : "Réserver sur WhatsApp"}
+                <span>
+                  {isSubmitting
+                    ? "Enregistrement..."
+                    : "Continuer sur WhatsApp"}
+                </span>
+
+
+                <span aria-hidden="true">↗</span>
               </button>
 
 
               <button
                 type="button"
-                className="call-link"
+                className="booking-secondary-action"
                 onClick={handleCall}
                 disabled={isSubmitting}
               >
@@ -1259,9 +996,9 @@ function Booking() {
               </button>
             </div>
           </form>
-        </div>
+        </section>
       </div>
-    </section>
+    </main>
   );
 }
 

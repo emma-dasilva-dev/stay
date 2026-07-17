@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDestinations } from "../../hooks/useDestinations";
 import "./destinations.css";
@@ -12,300 +12,288 @@ function formatNightlyPrice(startingPriceFcfa) {
 
 
 function Destinations() {
-  const { destinations, isLoading, error, reload } =
-    useDestinations();
-
-  const [activeDestinationId, setActiveDestinationId] =
-    useState(null);
+  const { destinations, isLoading, error, reload } = useDestinations();
 
 
-  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [activeCategory, setActiveCategory] = useState("Toutes");
 
 
-  const carouselRef = useRef(null);
-
-  const selectedDesktopDestination =
-  destinations.find(
-    (destination) =>
-      destination.id === activeDestinationId,
-  ) ?? destinations[0];
+  const categories = useMemo(() => {
+    const uniqueCategories = destinations
+      .map((destination) => destination.category)
+      .filter(Boolean);
 
 
-
-  const toggleDestination = (destinationId) => {
-    setActiveDestinationId((currentId) =>
-      currentId === destinationId ? null : destinationId,
-    );
-  };
+    return ["Toutes", ...new Set(uniqueCategories)];
+  }, [destinations]);
 
 
-  const handleCarouselScroll = () => {
-    const carousel = carouselRef.current;
-
-
-    if (!carousel) {
-      return;
+  const filteredDestinations = useMemo(() => {
+    if (activeCategory === "Toutes") {
+      return destinations;
     }
 
 
-    const firstCard = carousel.querySelector(
-      ".destination-card",
+    return destinations.filter(
+      (destination) => destination.category === activeCategory,
     );
+  }, [activeCategory, destinations]);
 
 
-    if (!firstCard) {
-      return;
-    }
+  const featuredDestination =
+    filteredDestinations.find((destination) => destination.isFeatured) ||
+    filteredDestinations[0];
 
 
-    const cardWidth = firstCard.offsetWidth;
+  const remainingDestinations = featuredDestination
+    ? filteredDestinations.filter(
+        (destination) => destination.id !== featuredDestination.id,
+      )
+    : [];
 
-
-    const carouselStyles =
-      window.getComputedStyle(carousel);
-
-
-    const gap =
-      parseFloat(carouselStyles.columnGap) ||
-      parseFloat(carouselStyles.gap) ||
-      0;
-
-
-    const newIndex = Math.round(
-      carousel.scrollLeft / (cardWidth + gap),
-    );
-
-
-    const safeIndex = Math.max(
-      0,
-      Math.min(newIndex, destinations.length - 1),
-    );
-
-
-    setActiveSlideIndex(safeIndex);
-  };
 
   return (
-    <section className="destinations-page">
-      <header className="destinations-header">
-        <h1>
-          <span className="type-line" aria-hidden="true">
-            |
+    <main className="destinations-page">
+      {/* =====================================================
+          INTRO
+      ====================================================== */}
+      <section className="destinations-intro">
+        <div className="destinations-intro-meta">
+          <span>02 / DESTINATIONS</span>
+          <span>
+            {String(destinations.length).padStart(2, "0")} lieux sélectionnés
           </span>
-          Découvrez votre séjour
-        </h1>
-
-
-        <p className="destinations-subtitle">
-          Survolez une image ou touchez-la pour en savoir plus.
-        </p>
-      </header>
-
-      {isLoading && (
-        <div className="stay-state">
-          <span className="stay-loader"></span>
-          <p>Chargement des destinations...</p>
         </div>
+
+
+        <div className="destinations-intro-content">
+          <h1>
+            Choisir
+            <span>où rester.</span>
+          </h1>
+
+
+          <p>
+            Une sélection d'adresses choisies pour leur atmosphère,
+            leur caractère et leur façon singulière de faire découvrir
+            le Bénin.
+          </p>
+        </div>
+      </section>
+
+
+      {/* =====================================================
+          LOADING / ERROR
+      ====================================================== */}
+      {isLoading && (
+        <section className="destinations-state">
+          <span className="destinations-loader" aria-hidden="true"></span>
+          <p>Chargement des destinations...</p>
+        </section>
       )}
 
+
       {!isLoading && error && (
-        <div className="stay-state">
+        <section className="destinations-state">
           <p>{error}</p>
+
+
           <button type="button" onClick={reload}>
             Réessayer
           </button>
-        </div>
+        </section>
       )}
 
+
       {!isLoading && !error && destinations.length === 0 && (
-        <div className="stay-state">
-          <p>Aucune destination n’est disponible pour le moment.</p>
-        </div>
+        <section className="destinations-state">
+          <p>Aucune destination n'est disponible pour le moment.</p>
+        </section>
       )}
+
 
       {!isLoading && !error && destinations.length > 0 && (
         <>
-      <div className="destinations-desktop-layout">
-  <div className="desktop-destination-list">
-    {destinations.map((destination) => {
-      const isSelected =
-        selectedDesktopDestination.id ===
-        destination.id;
+          {/* =====================================================
+              FILTERS
+          ====================================================== */}
+          <section className="destinations-filters">
+            <div className="destinations-filter-label">
+              <span>Explorer par ambiance</span>
+            </div>
 
 
-      return (
-        <button
-          key={destination.id}
-          type="button"
-          className={`desktop-destination-item ${
-            isSelected ? "is-active" : ""
-          }`}
-          onMouseEnter={() =>
-            setActiveDestinationId(destination.id)
-          }
-          onFocus={() =>
-            setActiveDestinationId(destination.id)
-          }
-          onClick={() =>
-            setActiveDestinationId(destination.id)
-          }
-        >
-          <span className="desktop-destination-name">
-            {destination.name}
-          </span>
-
-
-          <span className="desktop-destination-location">
-            {destination.location}
-          </span>
-        </button>
-      );
-    })}
-  </div>
-
-
-  <article className="desktop-destination-feature">
-    <div className="desktop-destination-image">
-      <img
-        src={selectedDesktopDestination.image}
-        alt={selectedDesktopDestination.name}
-      />
-
-
-      <div className="desktop-destination-overlay">
-        <p>
-          {selectedDesktopDestination.description}
-        </p>
-      </div>
-    </div>
-
-
-    <div className="desktop-destination-details">
-      <div>
-        <h2>
-          {selectedDesktopDestination.name}
-        </h2>
-
-
-        <p>
-          {selectedDesktopDestination.location}
-        </p>
-      </div>
-
-
-      <div className="desktop-destination-meta">
-        <span>
-          À partir de{" "}
-          {formatNightlyPrice(
-            selectedDesktopDestination.startingPriceFcfa,
-          )}
-          {" "} / nuit
-        </span>
-
-
-        <Link
-          to={`/booking?destination=${selectedDesktopDestination.id}`}
-          className="desktop-destination-book"
-        >
-          Réserver ce séjour
-        </Link>
-      </div>
-    </div>
-  </article>
-</div>
-
-
-      <div
-  className="destinations-content destinations-carousel"
-  ref={carouselRef}
-  onScroll={handleCarouselScroll}
-> 
-        {destinations.map((destination) => {
-          const isActive =
-            activeDestinationId === destination.id;
-
-
-          return (
-            <article
-              key={destination.id}
-              className={`destination-card ${
-                isActive ? "is-active" : ""
-              }`}
-            >
-              <div
-                className="destination-image-wrap"
-                role="button"
-                tabIndex={0}
-                aria-expanded={isActive}
-                aria-label={`Afficher les informations sur ${destination.name}`}
-                onClick={() =>
-                  toggleDestination(destination.id)
-                }
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter" ||
-                    event.key === " "
-                  ) {
-                    event.preventDefault();
-                    toggleDestination(destination.id);
+            <div className="destinations-filter-list">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className={
+                    activeCategory === category
+                      ? "destination-filter is-active"
+                      : "destination-filter"
                   }
-                }}
-              >
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </section>
+
+
+          {/* =====================================================
+              FEATURED DESTINATION
+          ====================================================== */}
+          {featuredDestination && (
+            <section className="destination-featured">
+              <div className="destination-featured-media">
                 <img
-                  src={destination.image}
-                  alt={destination.name}
+                  src={featuredDestination.image}
+                  alt={featuredDestination.name}
                 />
 
 
-                <div className="destination-overlay">
-                  <p>{destination.description}</p>
+                <div className="destination-featured-overlay"></div>
 
 
-                  <Link
-                    to={`/booking?destination=${destination.id}`}
-                    className="overlay-book-link"
-                    onClick={(event) =>
-                      event.stopPropagation()
-                    }
-                  >
-                    Réserver ce séjour
-                  </Link>
+                <div className="destination-featured-index">
+                  <span>À la une</span>
+                  <span>{featuredDestination.category}</span>
                 </div>
+
+
+                <Link
+                  to={`/booking?destination=${featuredDestination.id}`}
+                  className="destination-featured-action"
+                >
+                  <span>Réserver ce séjour</span>
+                  <span aria-hidden="true">↗</span>
+                </Link>
               </div>
 
 
-              <div className="destination-card-info">
-                <div className="destination-card-heading">
-                  <div>
-                    <h2>{destination.name}</h2>
-                  </div>
+              <div className="destination-featured-content">
+                <div>
+                  <span className="destination-featured-location">
+                    {featuredDestination.location}
+                  </span>
 
 
-                  <span className="destination-location">
-                    {destination.location}
+                  <h2>{featuredDestination.name}</h2>
+                </div>
+
+
+                <div className="destination-featured-copy">
+                  <p>{featuredDestination.description}</p>
+
+
+                  <span className="destination-featured-price">
+                    À partir de{" "}
+                    {formatNightlyPrice(
+                      featuredDestination.startingPriceFcfa,
+                    )}{" "}
+                    / nuit
                   </span>
                 </div>
-
-
-                <p className="destination-price">
-                  À partir de{" "}
-                  {formatNightlyPrice(
-                    destination.startingPriceFcfa,
-                  )}{" "}
-                  / nuit
-                </p>
               </div>
-            </article>
-          );
-        })}
-      </div>
+            </section>
+          )}
 
-      <p className="price-note">
-        * Les tarifs affichés sont donnés à titre indicatif.
-      </p>
+
+          {/* =====================================================
+              DESTINATION COLLECTION
+          ====================================================== */}
+          {remainingDestinations.length > 0 && (
+            <section className="destinations-collection">
+              <div className="destinations-collection-heading">
+                <span>La collection</span>
+                <span>
+                  {String(remainingDestinations.length).padStart(2, "0")}
+                </span>
+              </div>
+
+
+              <div className="destinations-grid">
+                {remainingDestinations.map((destination, index) => (
+                  <article
+                    key={destination.id}
+                    className="destination-gallery-card"
+                  >
+                    <Link
+                      to={`/booking?destination=${destination.id}`}
+                      className="destination-gallery-link"
+                    >
+                      <div className="destination-gallery-media">
+                        <img
+                          src={destination.image}
+                          alt={destination.name}
+                        />
+
+
+                        <div className="destination-gallery-overlay"></div>
+
+
+                        <span className="destination-gallery-number">
+                          {String(index + 2).padStart(2, "0")}
+                        </span>
+
+
+                        <span className="destination-gallery-arrow">
+                          ↗
+                        </span>
+                      </div>
+
+
+                      <div className="destination-gallery-info">
+                        <div>
+                          <span className="destination-gallery-location">
+                            {destination.location}
+                          </span>
+
+
+                          <h3>{destination.name}</h3>
+                        </div>
+
+
+                        <div className="destination-gallery-meta">
+                          <span>{destination.category}</span>
+
+
+                          <span>
+                            Dès{" "}
+                            {formatNightlyPrice(
+                              destination.startingPriceFcfa,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+
+          {/* =====================================================
+              FOOTNOTE
+          ====================================================== */}
+          <section className="destinations-note">
+            <span>
+              Les tarifs affichés sont indicatifs et peuvent varier
+              selon les dates et disponibilités.
+            </span>
+
+
+            <Link to="/booking">
+              Réserver un séjour
+              <span aria-hidden="true">↗</span>
+            </Link>
+          </section>
         </>
       )}
-    </section>
+    </main>
   );
 }
 

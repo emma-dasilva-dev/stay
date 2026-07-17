@@ -94,11 +94,7 @@ function About() {
             </Link>
 
 
-            <div className="about-hero-index" aria-hidden="true">
-              <span>01</span>
-              <span className="about-index-line"></span>
-              <span>03</span>
-            </div>
+            
           </div>
 
 
@@ -123,24 +119,13 @@ function About() {
                 <div className="about-image-overlay"></div>
 
 
-                <div className="about-image-caption">
-                  <span className="about-caption-location">
-                    Cotonou, Bénin
-                  </span>
-
-
-                  <span className="about-caption-number">06°22'N</span>
-                </div>
+                
               </div>
 
 
               <div className="about-3d-shadow" aria-hidden="true"></div>
             </div>
 
-
-            <span className="about-vertical-label" aria-hidden="true">
-              Séjours sélectionnés
-            </span>
           </div>
         </div>
 
