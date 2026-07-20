@@ -740,15 +740,33 @@
 }
 
 .admin-view-button {
+  position: relative;
+  z-index: 1;
+
   border: 1px solid var(--admin-line);
   border-radius: 999px;
   padding: 7px 11px;
+
   background: transparent;
   color: var(--admin-text);
+
   font: inherit;
   font-size: 8px;
+
   cursor: pointer;
+
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
 }
+
+.admin-view-button:hover {
+  border-color: var(--admin-text);
+  background: var(--admin-text);
+  color: #ffffff;
+}
+
 
 .admin-customer-count {
   display: inline-flex;
@@ -871,15 +889,28 @@
   height: 100vh;
   padding: 35px;
   overflow-y: auto;
+
   background: #f7f5f1;
   box-shadow: -20px 0 55px rgba(17, 20, 24, 0.18);
+
   transform: translateX(105%);
-  transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+
+  transition:
+    transform 380ms
+    cubic-bezier(
+      0.16,
+      1,
+      0.3,
+      1
+    );
+
   z-index: 100;
 }
 
 .admin-booking-drawer.is-open {
   transform: translateX(0);
+  pointer-events: auto;
 }
 
 .admin-drawer-header {
