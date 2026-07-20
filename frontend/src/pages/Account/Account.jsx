@@ -433,12 +433,27 @@ function GuestAccount({
 
       <section className="account-guest-intro">
         <div className="account-intro-meta">
-          <span>05 / COMPTE</span>
+  <span>
+    05 / COMPTE
+  </span>
 
-          <span>
-            ESPACE PERSONNEL
-          </span>
-        </div>
+  <div className="account-intro-meta-right">
+    <span>
+      ESPACE PERSONNEL
+    </span>
+
+    <Link
+      to="/staff"
+      className="account-team-access"
+    >
+      ACCÈS ÉQUIPE
+      <span aria-hidden="true">
+        ↗
+      </span>
+    </Link>
+  </div>
+</div>
+
 
         <div className="account-intro-main">
           <h1>

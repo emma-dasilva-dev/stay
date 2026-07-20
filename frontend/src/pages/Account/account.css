@@ -2107,3 +2107,41 @@ and (
     transition: none;
   }
 }
+
+.account-intro-meta-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.account-team-access {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--account-muted);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  text-transform: uppercase;
+  opacity: 0.48;
+  transition:
+    opacity 220ms ease,
+    color 220ms ease;
+}
+
+.account-team-access:hover {
+  color: var(--account-ink);
+  opacity: 1;
+}
+
+@media (max-width: 430px) {
+  .account-intro-meta-right {
+    align-items: flex-end;
+  }
+
+  .account-team-access {
+    font-size: 6px;
+  }
+}

@@ -1,13 +1,25 @@
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-const { pool } = require("../config/db");
+ const bcrypt =
+  require("bcryptjs");
+
+const crypto =
+  require("crypto");
+
+const { pool } =
+  require("../config/db");
+
 
 const BCRYPT_ROUNDS = 12;
+
 
 const ALLOWED_EMPLOYEE_ROLES = [
   "manager",
   "reservation_agent",
 ];
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
 
 function normalizeEmail(email) {
   return String(email || "")
@@ -15,32 +27,56 @@ function normalizeEmail(email) {
     .toLowerCase();
 }
 
+
 function normalizePhone(phone) {
-  return String(phone || "").trim();
+  return String(phone || "")
+    .trim();
 }
 
-function generateTemporaryPin() {
+
+function generateEmployeePin() {
   return String(
-    crypto.randomInt(100000, 1000000),
+    crypto.randomInt(
+      100000,
+      1000000,
+    ),
   );
 }
 
+
 function mapEmployee(row) {
   return {
-    id: row.id,
-    fullName: row.full_name,
-    email: row.email,
-    phone: row.phone,
-    role: row.role,
-    isActive: Boolean(row.is_active),
-    mustChangePin: Boolean(
-      row.must_change_pin,
-    ),
-    lastLoginAt: row.last_login_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id:
+      row.id,
+
+    fullName:
+      row.full_name,
+
+    email:
+      row.email,
+
+    phone:
+      row.phone,
+
+    role:
+      row.role,
+
+    isActive:
+      Boolean(
+        row.is_active,
+      ),
+
+    lastLoginAt:
+      row.last_login_at,
+
+    createdAt:
+      row.created_at,
+
+    updatedAt:
+      row.updated_at,
   };
 }
+
 
 function validateEmployeeInput({
   fullName,
@@ -56,10 +92,12 @@ function validateEmployeeInput({
   ) {
     return {
       valid: false,
+
       message:
         "Le nom complet, l’adresse e-mail, le téléphone et le rôle sont obligatoires.",
     };
   }
+
 
   if (
     fullName.length < 2 ||
@@ -67,23 +105,28 @@ function validateEmployeeInput({
   ) {
     return {
       valid: false,
+
       message:
         "Le nom complet doit contenir entre 2 et 120 caractères.",
     };
   }
+
 
   const emailIsValid =
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
       email,
     );
 
+
   if (!emailIsValid) {
     return {
       valid: false,
+
       message:
         "L’adresse e-mail n’est pas valide.",
     };
   }
+
 
   if (
     phone.length < 6 ||
@@ -91,10 +134,12 @@ function validateEmployeeInput({
   ) {
     return {
       valid: false,
+
       message:
         "Le numéro de téléphone n’est pas valide.",
     };
   }
+
 
   if (
     !ALLOWED_EMPLOYEE_ROLES.includes(
@@ -103,15 +148,18 @@ function validateEmployeeInput({
   ) {
     return {
       valid: false,
+
       message:
         "Le rôle sélectionné est invalide.",
     };
   }
 
+
   return {
     valid: true,
   };
 }
+
 
 async function emailAlreadyExists(
   email,
@@ -121,38 +169,55 @@ async function emailAlreadyExists(
     await pool.execute(
       `
       SELECT id
+
       FROM users
+
       WHERE email = ?
+
       LIMIT 1
       `,
+
       [email],
     );
 
-  if (existingUsers.length > 0) {
+
+  if (
+    existingUsers.length > 0
+  ) {
     return true;
   }
 
+
   let query = `
     SELECT id
+
     FROM employees
+
     WHERE email = ?
   `;
 
-  const parameters = [email];
+
+  const parameters = [
+    email,
+  ];
+
 
   if (ignoredEmployeeId) {
     query += `
       AND id <> ?
     `;
 
+
     parameters.push(
       ignoredEmployeeId,
     );
   }
 
+
   query += `
     LIMIT 1
   `;
+
 
   const [existingEmployees] =
     await pool.execute(
@@ -160,13 +225,26 @@ async function emailAlreadyExists(
       parameters,
     );
 
-  return existingEmployees.length > 0;
+
+  return (
+    existingEmployees.length >
+    0
+  );
 }
 
-async function getEmployees(req, res) {
+
+/* =========================================================
+   GET EMPLOYEES
+========================================================= */
+
+async function getEmployees(
+  req,
+  res,
+) {
   try {
     const [rows] =
-      await pool.execute(`
+      await pool.execute(
+        `
         SELECT
           id,
           full_name,
@@ -174,52 +252,85 @@ async function getEmployees(req, res) {
           phone,
           role,
           is_active,
-          must_change_pin,
           last_login_at,
           created_at,
           updated_at
+
         FROM employees
+
         ORDER BY
           is_active DESC,
           created_at DESC
-      `);
+        `,
+      );
 
-    return res.status(200).json({
-      success: true,
-      count: rows.length,
-      employees: rows.map(mapEmployee),
-    });
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+
+        count:
+          rows.length,
+
+        employees:
+          rows.map(
+            mapEmployee,
+          ),
+      });
   } catch (error) {
     console.error(
       "Admin get employees error:",
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Impossible de charger les membres de l’équipe.",
-    });
+
+    return res
+      .status(500)
+      .json({
+        success: false,
+
+        message:
+          "Impossible de charger les membres de l’équipe.",
+      });
   }
 }
 
-async function createEmployee(req, res) {
+
+/* =========================================================
+   CREATE EMPLOYEE
+========================================================= */
+
+async function createEmployee(
+  req,
+  res,
+) {
   try {
-    const fullName = String(
-      req.body.fullName || "",
-    ).trim();
+    const fullName =
+      String(
+        req.body.fullName ||
+          "",
+      ).trim();
 
-    const email = normalizeEmail(
-      req.body.email,
-    );
 
-    const phone = normalizePhone(
-      req.body.phone,
-    );
+    const email =
+      normalizeEmail(
+        req.body.email,
+      );
 
-    const role = String(
-      req.body.role || "",
-    ).trim();
+
+    const phone =
+      normalizePhone(
+        req.body.phone,
+      );
+
+
+    const role =
+      String(
+        req.body.role ||
+          "",
+      ).trim();
+
 
     const validation =
       validateEmployeeInput({
@@ -229,31 +340,47 @@ async function createEmployee(req, res) {
         role,
       });
 
+
     if (!validation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: validation.message,
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+
+          message:
+            validation.message,
+        });
     }
+
 
     const emailExists =
-      await emailAlreadyExists(email);
+      await emailAlreadyExists(
+        email,
+      );
+
 
     if (emailExists) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "Cette adresse e-mail est déjà utilisée.",
-      });
+      return res
+        .status(409)
+        .json({
+          success: false,
+
+          message:
+            "Cette adresse e-mail est déjà utilisée.",
+        });
     }
 
-    const temporaryPin =
-      generateTemporaryPin();
 
-    const pinHash = await bcrypt.hash(
-      temporaryPin,
-      BCRYPT_ROUNDS,
-    );
+    const employeePin =
+      generateEmployeePin();
+
+
+    const pinHash =
+      await bcrypt.hash(
+        employeePin,
+        BCRYPT_ROUNDS,
+      );
+
 
     const [result] =
       await pool.execute(
@@ -266,10 +393,25 @@ async function createEmployee(req, res) {
           pin_hash,
           is_active,
           must_change_pin,
+          failed_login_attempts,
+          locked_until,
           created_by_user_id
         )
-        VALUES (?, ?, ?, ?, ?, TRUE, TRUE, ?)
+
+        VALUES (
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          TRUE,
+          FALSE,
+          0,
+          NULL,
+          ?
+        )
         `,
+
         [
           fullName,
           email,
@@ -279,6 +421,7 @@ async function createEmployee(req, res) {
           req.user.id,
         ],
       );
+
 
     const [createdEmployees] =
       await pool.execute(
@@ -290,87 +433,142 @@ async function createEmployee(req, res) {
           phone,
           role,
           is_active,
-          must_change_pin,
           last_login_at,
           created_at,
           updated_at
+
         FROM employees
+
         WHERE id = ?
+
         LIMIT 1
         `,
-        [result.insertId],
+
+        [
+          result.insertId,
+        ],
       );
 
-    return res.status(201).json({
-      success: true,
-      message:
-        "Le membre de l’équipe a été créé.",
-      employee: mapEmployee(
-        createdEmployees[0],
-      ),
 
-      /*
-       * This PIN is returned only once.
-       * It is never stored in plain text.
-       */
-      temporaryPin,
-    });
+    return res
+      .status(201)
+      .json({
+        success: true,
+
+        message:
+          "Le membre de l’équipe a été créé.",
+
+        employee:
+          mapEmployee(
+            createdEmployees[0],
+          ),
+
+        /*
+         * temporaryPin is kept only
+         * because your current Admin.jsx
+         * already expects this property.
+         *
+         * The PIN is now permanent until
+         * the Admin resets it.
+         */
+
+        temporaryPin:
+          employeePin,
+
+        pin:
+          employeePin,
+      });
   } catch (error) {
     console.error(
       "Admin create employee error:",
       error,
     );
 
+
     if (
-      error.code === "ER_DUP_ENTRY"
+      error.code ===
+      "ER_DUP_ENTRY"
     ) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "Cette adresse e-mail est déjà utilisée.",
-      });
+      return res
+        .status(409)
+        .json({
+          success: false,
+
+          message:
+            "Cette adresse e-mail est déjà utilisée.",
+        });
     }
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Impossible de créer ce membre de l’équipe.",
-    });
+
+    return res
+      .status(500)
+      .json({
+        success: false,
+
+        message:
+          "Impossible de créer ce membre de l’équipe.",
+      });
   }
 }
 
-async function updateEmployee(req, res) {
+
+/* =========================================================
+   UPDATE EMPLOYEE
+========================================================= */
+
+async function updateEmployee(
+  req,
+  res,
+) {
   try {
-    const employeeId = Number(
-      req.params.employeeId,
-    );
+    const employeeId =
+      Number(
+        req.params.employeeId,
+      );
+
 
     if (
-      !Number.isInteger(employeeId) ||
+      !Number.isInteger(
+        employeeId,
+      ) ||
       employeeId < 1
     ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "L’identifiant de l’employé est invalide.",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+
+          message:
+            "L’identifiant de l’employé est invalide.",
+        });
     }
 
-    const fullName = String(
-      req.body.fullName || "",
-    ).trim();
 
-    const email = normalizeEmail(
-      req.body.email,
-    );
+    const fullName =
+      String(
+        req.body.fullName ||
+          "",
+      ).trim();
 
-    const phone = normalizePhone(
-      req.body.phone,
-    );
 
-    const role = String(
-      req.body.role || "",
-    ).trim();
+    const email =
+      normalizeEmail(
+        req.body.email,
+      );
+
+
+    const phone =
+      normalizePhone(
+        req.body.phone,
+      );
+
+
+    const role =
+      String(
+        req.body.role ||
+          "",
+      ).trim();
+
 
     const validation =
       validateEmployeeInput({
@@ -380,33 +578,49 @@ async function updateEmployee(req, res) {
         role,
       });
 
+
     if (!validation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: validation.message,
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+
+          message:
+            validation.message,
+        });
     }
+
 
     const [existingEmployees] =
       await pool.execute(
         `
         SELECT id
+
         FROM employees
+
         WHERE id = ?
+
         LIMIT 1
         `,
+
         [employeeId],
       );
 
+
     if (
-      existingEmployees.length === 0
+      existingEmployees.length ===
+      0
     ) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "Membre de l’équipe introuvable.",
-      });
+      return res
+        .status(404)
+        .json({
+          success: false,
+
+          message:
+            "Membre de l’équipe introuvable.",
+        });
     }
+
 
     const emailExists =
       await emailAlreadyExists(
@@ -414,24 +628,32 @@ async function updateEmployee(req, res) {
         employeeId,
       );
 
+
     if (emailExists) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "Cette adresse e-mail est déjà utilisée.",
-      });
+      return res
+        .status(409)
+        .json({
+          success: false,
+
+          message:
+            "Cette adresse e-mail est déjà utilisée.",
+        });
     }
+
 
     await pool.execute(
       `
       UPDATE employees
+
       SET
         full_name = ?,
         email = ?,
         phone = ?,
         role = ?
+
       WHERE id = ?
       `,
+
       [
         fullName,
         email,
@@ -441,6 +663,7 @@ async function updateEmployee(req, res) {
       ],
     );
 
+
     const [updatedEmployees] =
       await pool.execute(
         `
@@ -451,94 +674,184 @@ async function updateEmployee(req, res) {
           phone,
           role,
           is_active,
-          must_change_pin,
           last_login_at,
           created_at,
           updated_at
+
         FROM employees
+
         WHERE id = ?
+
         LIMIT 1
         `,
+
         [employeeId],
       );
 
-    return res.status(200).json({
-      success: true,
-      message:
-        "Les informations ont été mises à jour.",
-      employee: mapEmployee(
-        updatedEmployees[0],
-      ),
-    });
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+
+        message:
+          "Les informations ont été mises à jour.",
+
+        employee:
+          mapEmployee(
+            updatedEmployees[0],
+          ),
+      });
   } catch (error) {
     console.error(
       "Admin update employee error:",
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Impossible de modifier ce membre de l’équipe.",
-    });
+
+    return res
+      .status(500)
+      .json({
+        success: false,
+
+        message:
+          "Impossible de modifier ce membre de l’équipe.",
+      });
   }
 }
+
+
+/* =========================================================
+   UPDATE EMPLOYEE STATUS
+========================================================= */
 
 async function updateEmployeeStatus(
   req,
   res,
 ) {
-  try {
-    const employeeId = Number(
+  const employeeId =
+    Number(
       req.params.employeeId,
     );
 
-    const isActive =
-      req.body.isActive;
 
-    if (
-      !Number.isInteger(employeeId) ||
-      employeeId < 1
-    ) {
-      return res.status(400).json({
+  const isActive =
+    req.body.isActive;
+
+
+  if (
+    !Number.isInteger(
+      employeeId,
+    ) ||
+    employeeId < 1
+  ) {
+    return res
+      .status(400)
+      .json({
         success: false,
+
         message:
           "L’identifiant de l’employé est invalide.",
       });
-    }
+  }
 
-    if (
-      typeof isActive !== "boolean"
-    ) {
-      return res.status(400).json({
+
+  if (
+    typeof isActive !==
+    "boolean"
+  ) {
+    return res
+      .status(400)
+      .json({
         success: false,
+
         message:
           "Le statut demandé est invalide.",
       });
-    }
+  }
+
+
+  const connection =
+    await pool.getConnection();
+
+
+  try {
+    await connection
+      .beginTransaction();
+
 
     const [result] =
-      await pool.execute(
+      await connection.execute(
         `
         UPDATE employees
-        SET is_active = ?
+
+        SET
+          is_active = ?
+
         WHERE id = ?
         `,
+
         [
           isActive,
           employeeId,
         ],
       );
 
+
     if (
-      result.affectedRows === 0
+      result.affectedRows ===
+      0
     ) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "Membre de l’équipe introuvable.",
-      });
+      await connection.rollback();
+
+
+      return res
+        .status(404)
+        .json({
+          success: false,
+
+          message:
+            "Membre de l’équipe introuvable.",
+        });
     }
+
+
+    /*
+     * Deactivating an employee also
+     * terminates every active session.
+     */
+
+    if (!isActive) {
+      await connection.execute(
+        `
+        UPDATE employee_sessions
+
+        SET
+          is_active = FALSE,
+
+          logged_out_at =
+            COALESCE(
+              logged_out_at,
+              CURRENT_TIMESTAMP
+            ),
+
+          last_seen_at =
+            CURRENT_TIMESTAMP
+
+        WHERE
+          employee_id = ?
+
+          AND
+          is_active = TRUE
+        `,
+
+        [employeeId],
+      );
+    }
+
+
+    await connection.commit();
+
 
     const [updatedEmployees] =
       await pool.execute(
@@ -550,129 +863,253 @@ async function updateEmployeeStatus(
           phone,
           role,
           is_active,
-          must_change_pin,
           last_login_at,
           created_at,
           updated_at
+
         FROM employees
+
         WHERE id = ?
+
         LIMIT 1
         `,
+
         [employeeId],
       );
 
-    return res.status(200).json({
-      success: true,
-      message: isActive
-        ? "L’accès de l’employé a été activé."
-        : "L’accès de l’employé a été désactivé.",
-      employee: mapEmployee(
-        updatedEmployees[0],
-      ),
-    });
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+
+        message:
+          isActive
+            ? "L’accès de l’employé a été activé."
+            : "L’accès de l’employé a été désactivé.",
+
+        employee:
+          mapEmployee(
+            updatedEmployees[0],
+          ),
+      });
   } catch (error) {
+    await connection.rollback();
+
+
     console.error(
       "Admin employee status error:",
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Impossible de modifier l’accès de cet employé.",
-    });
+
+    return res
+      .status(500)
+      .json({
+        success: false,
+
+        message:
+          "Impossible de modifier l’accès de cet employé.",
+      });
+  } finally {
+    connection.release();
   }
 }
+
+
+/* =========================================================
+   RESET EMPLOYEE PIN
+========================================================= */
 
 async function resetEmployeePin(
   req,
   res,
 ) {
-  try {
-    const employeeId = Number(
+  const employeeId =
+    Number(
       req.params.employeeId,
     );
 
-    if (
-      !Number.isInteger(employeeId) ||
-      employeeId < 1
-    ) {
-      return res.status(400).json({
+
+  if (
+    !Number.isInteger(
+      employeeId,
+    ) ||
+    employeeId < 1
+  ) {
+    return res
+      .status(400)
+      .json({
         success: false,
+
         message:
           "L’identifiant de l’employé est invalide.",
       });
-    }
+  }
+
+
+  const connection =
+    await pool.getConnection();
+
+
+  try {
+    await connection
+      .beginTransaction();
+
 
     const [employees] =
-      await pool.execute(
+      await connection.execute(
         `
         SELECT id
+
         FROM employees
+
         WHERE id = ?
+
         LIMIT 1
         `,
+
         [employeeId],
       );
 
-    if (employees.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "Membre de l’équipe introuvable.",
-      });
+
+    if (
+      employees.length ===
+      0
+    ) {
+      await connection.rollback();
+
+
+      return res
+        .status(404)
+        .json({
+          success: false,
+
+          message:
+            "Membre de l’équipe introuvable.",
+        });
     }
 
-    const temporaryPin =
-      generateTemporaryPin();
 
-    const pinHash = await bcrypt.hash(
-      temporaryPin,
-      BCRYPT_ROUNDS,
-    );
+    const employeePin =
+      generateEmployeePin();
 
-    await pool.execute(
+
+    const pinHash =
+      await bcrypt.hash(
+        employeePin,
+        BCRYPT_ROUNDS,
+      );
+
+
+    await connection.execute(
       `
       UPDATE employees
+
       SET
         pin_hash = ?,
-        must_change_pin = TRUE
+
+        must_change_pin = FALSE,
+
+        failed_login_attempts = 0,
+
+        locked_until = NULL
+
       WHERE id = ?
       `,
+
       [
         pinHash,
         employeeId,
       ],
     );
 
-    return res.status(200).json({
-      success: true,
-      message:
-        "Un nouveau code PIN temporaire a été généré.",
 
-      /*
-       * Returned only once.
-       */
-      temporaryPin,
-    });
+    /*
+     * Resetting the PIN immediately
+     * terminates existing sessions.
+     */
+
+    await connection.execute(
+      `
+      UPDATE employee_sessions
+
+      SET
+        is_active = FALSE,
+
+        logged_out_at =
+          COALESCE(
+            logged_out_at,
+            CURRENT_TIMESTAMP
+          ),
+
+        last_seen_at =
+          CURRENT_TIMESTAMP
+
+      WHERE
+        employee_id = ?
+
+        AND
+        is_active = TRUE
+      `,
+
+      [employeeId],
+    );
+
+
+    await connection.commit();
+
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+
+        message:
+          "Un nouveau code PIN d’accès a été généré.",
+
+        temporaryPin:
+          employeePin,
+
+        pin:
+          employeePin,
+      });
   } catch (error) {
+    await connection.rollback();
+
+
     console.error(
       "Admin reset employee PIN error:",
       error,
     );
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Impossible de réinitialiser le code PIN.",
-    });
+
+    return res
+      .status(500)
+      .json({
+        success: false,
+
+        message:
+          "Impossible de réinitialiser le code PIN.",
+      });
+  } finally {
+    connection.release();
   }
 }
 
+
+/* =========================================================
+   EXPORTS
+========================================================= */
+
 module.exports = {
   getEmployees,
+
   createEmployee,
+
   updateEmployee,
+
   updateEmployeeStatus,
+
   resetEmployeePin,
 };

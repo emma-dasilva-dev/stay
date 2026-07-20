@@ -1,19 +1,25 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+} from "react-router-dom";
 
 import Layout from "./components/Layout/Layout";
 
 import About from "./pages/About/About";
-import Destinations from "./pages/Destinations/Destinations";
-import Booking from "./pages/Booking/Booking";
-import FAQ from "./pages/FAQ/FAQ";
 import Account from "./pages/Account/Account";
 import Admin from "./pages/Admin/Admin";
+import Booking from "./pages/Booking/Booking";
+import Destinations from "./pages/Destinations/Destinations";
+import EmployeeDashboard from "./pages/EmployeeDashboard/EmployeeDashboard";
+import EmployeePortal from "./pages/EmployeePortal/EmployeePortal";
+import FAQ from "./pages/FAQ/FAQ";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public website pages */}
+        {/* Public website */}
         <Route
           path="/"
           element={
@@ -59,8 +65,23 @@ function App() {
           }
         />
 
-        {/* Hidden administrator area */}
-        <Route path="/admin" element={<Admin />} />
+        {/* Employee authentication */}
+        <Route
+          path="/staff"
+          element={<EmployeePortal />}
+        />
+
+        {/* Employee workspace */}
+        <Route
+          path="/staff/dashboard"
+          element={<EmployeeDashboard />}
+        />
+
+        {/* Super Admin */}
+        <Route
+          path="/admin"
+          element={<Admin />}
+        />
       </Routes>
     </BrowserRouter>
   );
