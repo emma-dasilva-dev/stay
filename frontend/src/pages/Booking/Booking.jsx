@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { bookingsApi } from "../../services/api";
 import { useDestinations } from "../../hooks/useDestinations";
@@ -19,6 +19,22 @@ function ArrowIcon({ className = "" }) {
     >
       <path d="M5 15L15 5" />
       <path d="M7 5H15V13" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ direction = "right" }) {
+  const isLeft = direction === "left";
+
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d={isLeft ? "M12.5 5L7.5 10L12.5 15" : "M7.5 5L12.5 10L7.5 15"}
+      />
     </svg>
   );
 }
@@ -68,6 +84,7 @@ function handleImageError(event) {
 
 function Booking() {
   const [searchParams] = useSearchParams();
+  const destinationScrollerRef = useRef(null);
 
   const {
     destinations,
@@ -92,7 +109,6 @@ function Booking() {
   });
 
   const [errors, setErrors] = useState({});
-
   const [isSubmitting, setIsSubmitting] =
     useState(false);
 
@@ -152,6 +168,10 @@ function Booking() {
       : selectedDestination.startingPriceFcfa
     : 0;
 
+  const totalGuests =
+    Number(formData.adults) +
+    Number(formData.children);
+
   const today = new Date()
     .toISOString()
     .split("T")[0];
@@ -203,6 +223,45 @@ function Booking() {
     }
   };
 
+  const scrollDestinations = (direction) => {
+    const scroller =
+      destinationScrollerRef.current;
+
+    if (!scroller) {
+      return;
+    }
+
+    const scrollDistance =
+      Math.max(scroller.clientWidth * 0.72, 320);
+
+    scroller.scrollBy({
+      left:
+        direction === "left"
+          ? -scrollDistance
+          : scrollDistance,
+      behavior: "smooth",
+    });
+  };
+
+  const handleDestinationWheel = (event) => {
+    const scroller =
+      destinationScrollerRef.current;
+
+    if (!scroller) {
+      return;
+    }
+
+    if (
+      Math.abs(event.deltaY) >
+      Math.abs(event.deltaX)
+    ) {
+      event.preventDefault();
+
+      scroller.scrollLeft +=
+        event.deltaY;
+    }
+  };
+
   const validateForm = () => {
     const nextErrors = {};
 
@@ -237,7 +296,7 @@ function Booking() {
 
     if (!formData.fullName.trim()) {
       nextErrors.fullName =
-        "Veuillez renseigner le nom du réservant.";
+        "Veuillez renseigner votre nom.";
     }
 
     if (!formData.phone.trim()) {
@@ -296,7 +355,9 @@ function Booking() {
     const childrenText =
       formData.children > 0
         ? `${formData.children} enfant${
-            formData.children > 1 ? "s" : ""
+            formData.children > 1
+              ? "s"
+              : ""
           }`
         : "aucun enfant";
 
@@ -347,13 +408,16 @@ function Booking() {
 
     try {
       const booking =
-        await saveBookingRequest("whatsapp");
+        await saveBookingRequest(
+          "whatsapp",
+        );
 
-      const message = encodeURIComponent(
-        createWhatsAppMessage(
-          booking.reference,
-        ),
-      );
+      const message =
+        encodeURIComponent(
+          createWhatsAppMessage(
+            booking.reference,
+          ),
+        );
 
       setSubmissionMessage({
         type: "success",
@@ -365,44 +429,6 @@ function Booking() {
         "_blank",
         "noopener,noreferrer",
       );
-    } catch (error) {
-      setSubmissionMessage({
-        type: "error",
-        text:
-          error.message ||
-          "Impossible d’enregistrer votre demande.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCall = async () => {
-    if (
-      !validateForm() ||
-      isSubmitting
-    ) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    setSubmissionMessage({
-      type: "",
-      text: "",
-    });
-
-    try {
-      const booking =
-        await saveBookingRequest("call");
-
-      setSubmissionMessage({
-        type: "success",
-        text: `Demande ${booking.reference} enregistrée.`,
-      });
-
-      window.location.href =
-        `tel:${CONTACT.callNumber}`;
     } catch (error) {
       setSubmissionMessage({
         type: "error",
@@ -464,434 +490,519 @@ function Booking() {
 
   return (
     <main className="booking-page">
-      <div className="booking-shell">
-        {/* LEFT SIDE */}
-        <section className="booking-visual">
-          <span className="booking-page-index">
-            03 / RÉSERVATION
-          </span>
+      {/* =====================================================
+          INTRO
+      ====================================================== */}
+      <section className="booking-intro">
+        <span className="booking-intro-index">
+          03 / RÉSERVATION
+        </span>
 
-          <div className="booking-editorial">
-            <h1>
-              Réserver
-              <span>autrement.</span>
-            </h1>
+        <div className="booking-intro-content">
+          <h1>
+            Réserver
+            <span>votre séjour.</span>
+          </h1>
+
+          <p>
+            Choisissez votre destination,
+            vos dates et envoyez votre demande
+            directement à STAY.
+          </p>
+        </div>
+      </section>
+
+      {/* =====================================================
+          DESTINATION SELECTOR
+      ====================================================== */}
+      <section className="booking-destination-section">
+        <div className="booking-destination-heading">
+          <div>
+            <span className="booking-section-kicker">
+              Destination
+            </span>
+
+            <p>
+              Choisissez votre séjour.
+            </p>
           </div>
 
-          <div className="booking-visual-image">
-            <img
-              src={selectedDestination.image}
-              alt={selectedDestination.name}
-              onError={handleImageError}
-            />
+          <div className="booking-scroll-controls">
+            <button
+              type="button"
+              aria-label="Voir les destinations précédentes"
+              onClick={() =>
+                scrollDestinations("left")
+              }
+            >
+              <ChevronIcon direction="left" />
+            </button>
 
-            <div
-              className="booking-visual-gradient"
-              aria-hidden="true"
-            />
+            <button
+              type="button"
+              aria-label="Voir les destinations suivantes"
+              onClick={() =>
+                scrollDestinations("right")
+              }
+            >
+              <ChevronIcon direction="right" />
+            </button>
+          </div>
+        </div>
 
-            <div className="booking-image-content">
-              <div>
+        <div
+          ref={destinationScrollerRef}
+          className="booking-destination-scroller"
+          onWheel={handleDestinationWheel}
+        >
+          {destinations.map(
+            (destination) => {
+              const isSelected =
+                Number(
+                  formData.destinationId,
+                ) === destination.id;
+
+              return (
+                <button
+                  key={destination.id}
+                  type="button"
+                  className={
+                    isSelected
+                      ? "booking-destination-card is-selected"
+                      : "booking-destination-card"
+                  }
+                  onClick={() =>
+                    handleDestinationSelect(
+                      destination.id,
+                    )
+                  }
+                  aria-pressed={
+                    isSelected
+                  }
+                >
+                  <span className="booking-destination-card-image">
+                    <img
+                      src={
+                        destination.image
+                      }
+                      alt=""
+                      onError={
+                        handleImageError
+                      }
+                    />
+                  </span>
+
+                  <span className="booking-destination-card-copy">
+                    <strong>
+                      {
+                        destination.name
+                      }
+                    </strong>
+
+                    <small>
+                      {
+                        destination.location
+                      }
+                    </small>
+                  </span>
+                </button>
+              );
+            },
+          )}
+        </div>
+
+        {errors.destinationId && (
+          <span className="field-error booking-destination-error">
+            {errors.destinationId}
+          </span>
+        )}
+      </section>
+
+      {/* =====================================================
+          MAIN BOOKING CARD
+      ====================================================== */}
+      <section className="booking-main">
+        <div className="booking-card">
+          {/* LEFT / DESTINATION PREVIEW */}
+          <aside className="booking-preview">
+            <div className="booking-preview-image">
+              <img
+                src={
+                  selectedDestination.image
+                }
+                alt={
+                  selectedDestination.name
+                }
+                onError={
+                  handleImageError
+                }
+              />
+
+              <div
+                className="booking-preview-overlay"
+                aria-hidden="true"
+              />
+
+              <div className="booking-preview-copy">
                 <span>
-                  Votre destination
+                  {
+                    selectedDestination.location
+                  }
                 </span>
 
                 <h2>
-                  {selectedDestination.name}
+                  {
+                    selectedDestination.name
+                  }
                 </h2>
 
                 <p>
-                  {selectedDestination.location}
-                </p>
-              </div>
-
-              <div className="booking-image-price">
-                <span>À partir de</span>
-
-                <strong>
+                  Dès{" "}
                   {formatFcfa(
                     selectedDestination.startingPriceFcfa,
                   )}{" "}
-                  FCFA
-                </strong>
-
-                <small>par nuit</small>
+                  FCFA / nuit
+                </p>
               </div>
             </div>
-          </div>
-        </section>
+          </aside>
 
-        {/* RIGHT SIDE */}
-        <section className="booking-panel">
-          <div className="booking-panel-header">
-            <h2>Votre séjour.</h2>
+          {/* RIGHT / FORM */}
+          <div className="booking-form-area">
+            <form
+              className="booking-form"
+              onSubmit={(event) =>
+                event.preventDefault()
+              }
+              noValidate
+            >
+              <section className="booking-form-block">
+                <span className="booking-form-label">
+                  Séjour
+                </span>
+
+                <div className="booking-form-grid">
+                  <div className="booking-field">
+                    <label htmlFor="checkIn">
+                      Arrivée
+                    </label>
+
+                    <input
+                      id="checkIn"
+                      name="checkIn"
+                      type="date"
+                      min={today}
+                      value={
+                        formData.checkIn
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+
+                    {errors.checkIn && (
+                      <span className="field-error">
+                        {
+                          errors.checkIn
+                        }
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="booking-field">
+                    <label htmlFor="checkOut">
+                      Départ
+                    </label>
+
+                    <input
+                      id="checkOut"
+                      name="checkOut"
+                      type="date"
+                      min={
+                        formData.checkIn ||
+                        today
+                      }
+                      value={
+                        formData.checkOut
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+
+                    {errors.checkOut && (
+                      <span className="field-error">
+                        {
+                          errors.checkOut
+                        }
+                      </span>
+                    )}
+                  </div>
+
+                  {errors.dates && (
+                    <p className="booking-wide-error">
+                      {
+                        errors.dates
+                      }
+                    </p>
+                  )}
+
+                  <div className="booking-field">
+                    <label htmlFor="adults">
+                      Adultes
+                    </label>
+
+                    <select
+                      id="adults"
+                      name="adults"
+                      value={
+                        formData.adults
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    >
+                      {[
+                        1, 2, 3, 4,
+                        5, 6, 7, 8,
+                      ].map(
+                        (number) => (
+                          <option
+                            key={
+                              number
+                            }
+                            value={
+                              number
+                            }
+                          >
+                            {
+                              number
+                            }
+                          </option>
+                        ),
+                      )}
+                    </select>
+
+                    {errors.adults && (
+                      <span className="field-error">
+                        {
+                          errors.adults
+                        }
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="booking-field">
+                    <label htmlFor="children">
+                      Enfants
+                    </label>
+
+                    <select
+                      id="children"
+                      name="children"
+                      value={
+                        formData.children
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    >
+                      {[
+                        0, 1, 2, 3,
+                        4, 5, 6,
+                      ].map(
+                        (number) => (
+                          <option
+                            key={
+                              number
+                            }
+                            value={
+                              number
+                            }
+                          >
+                            {
+                              number
+                            }
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </div>
+                </div>
+              </section>
+
+              <section className="booking-form-block">
+                <span className="booking-form-label">
+                  Coordonnées
+                </span>
+
+                <div className="booking-form-grid">
+                  <div className="booking-field booking-field-wide">
+                    <label htmlFor="fullName">
+                      Nom complet
+                    </label>
+
+                    <input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Votre nom complet"
+                      value={
+                        formData.fullName
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+
+                    {errors.fullName && (
+                      <span className="field-error">
+                        {
+                          errors.fullName
+                        }
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="booking-field">
+                    <label htmlFor="phone">
+                      Téléphone
+                    </label>
+
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      autoComplete="tel"
+                      placeholder="+229..."
+                      value={
+                        formData.phone
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+
+                    {errors.phone && (
+                      <span className="field-error">
+                        {
+                          errors.phone
+                        }
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="booking-field">
+                    <label htmlFor="email">
+                      E-mail
+                    </label>
+
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="nom@exemple.com"
+                      value={
+                        formData.email
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+
+                    {errors.email && (
+                      <span className="field-error">
+                        {
+                          errors.email
+                        }
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="booking-field booking-field-wide">
+                    <label htmlFor="specialRequest">
+                      Demande particulière
+                      <span>
+                        {" "}
+                        · facultatif
+                      </span>
+                    </label>
+
+                    <textarea
+                      id="specialRequest"
+                      name="specialRequest"
+                      rows="2"
+                      placeholder="Transport, arrivée tardive, préférence particulière..."
+                      value={
+                        formData.specialRequest
+                      }
+                      onChange={
+                        handleChange
+                      }
+                    />
+                  </div>
+                </div>
+              </section>
+            </form>
           </div>
 
-          {/* DESTINATION */}
-          <div className="booking-destination-block">
-            <div className="booking-section-heading">
-              <span>01</span>
+          {/* SUMMARY + ACTIONS */}
+          <footer className="booking-card-footer">
+            <div className="booking-summary">
+              <div>
+                <span>Durée</span>
+
+                <strong>
+                  {numberOfNights > 0
+                    ? `${numberOfNights} nuit${
+                        numberOfNights >
+                        1
+                          ? "s"
+                          : ""
+                      }`
+                    : "—"}
+                </strong>
+              </div>
 
               <div>
-                <h3>Destination</h3>
-              </div>
-            </div>
-
-            <div className="booking-destination-selector">
-              {destinations.map(
-                (destination) => {
-                  const isSelected =
-                    Number(
-                      formData.destinationId,
-                    ) === destination.id;
-
-                  return (
-                    <button
-                      key={destination.id}
-                      type="button"
-                      className={
-                        isSelected
-                          ? "booking-destination-option is-selected"
-                          : "booking-destination-option"
-                      }
-                      onClick={() =>
-                        handleDestinationSelect(
-                          destination.id,
-                        )
-                      }
-                      aria-pressed={isSelected}
-                    >
-                      <div className="booking-destination-image">
-                        <img
-                          src={destination.image}
-                          alt=""
-                          onError={
-                            handleImageError
-                          }
-                        />
-                      </div>
-
-                      <span>
-                        {destination.name}
-                      </span>
-                    </button>
-                  );
-                },
-              )}
-            </div>
-
-            {errors.destinationId && (
-              <span className="field-error">
-                {errors.destinationId}
-              </span>
-            )}
-          </div>
-
-          <form
-            className="booking-form"
-            onSubmit={(event) =>
-              event.preventDefault()
-            }
-            noValidate
-          >
-            {/* DATES AND GUESTS */}
-            <section className="booking-form-section">
-              <div className="booking-section-heading">
-                <span>02</span>
-
-                <div>
-                  <h3>
-                    Dates &amp; voyageurs
-                  </h3>
-                </div>
-              </div>
-
-              <div className="booking-form-grid">
-                <div className="booking-field">
-                  <label htmlFor="checkIn">
-                    Arrivée
-                  </label>
-
-                  <input
-                    id="checkIn"
-                    name="checkIn"
-                    type="date"
-                    min={today}
-                    value={formData.checkIn}
-                    onChange={handleChange}
-                  />
-
-                  {errors.checkIn && (
-                    <span className="field-error">
-                      {errors.checkIn}
-                    </span>
-                  )}
-                </div>
-
-                <div className="booking-field">
-                  <label htmlFor="checkOut">
-                    Départ
-                  </label>
-
-                  <input
-                    id="checkOut"
-                    name="checkOut"
-                    type="date"
-                    min={
-                      formData.checkIn ||
-                      today
-                    }
-                    value={formData.checkOut}
-                    onChange={handleChange}
-                  />
-
-                  {errors.checkOut && (
-                    <span className="field-error">
-                      {errors.checkOut}
-                    </span>
-                  )}
-                </div>
-
-                {errors.dates && (
-                  <p className="form-wide-error">
-                    {errors.dates}
-                  </p>
-                )}
-
-                <div className="booking-field">
-                  <label htmlFor="adults">
-                    Adultes
-                  </label>
-
-                  <select
-                    id="adults"
-                    name="adults"
-                    value={formData.adults}
-                    onChange={handleChange}
-                  >
-                    {[
-                      1, 2, 3, 4, 5, 6, 7,
-                      8,
-                    ].map((number) => (
-                      <option
-                        key={number}
-                        value={number}
-                      >
-                        {number}
-                      </option>
-                    ))}
-                  </select>
-
-                  {errors.adults && (
-                    <span className="field-error">
-                      {errors.adults}
-                    </span>
-                  )}
-                </div>
-
-                <div className="booking-field">
-                  <label htmlFor="children">
-                    Enfants
-                  </label>
-
-                  <select
-                    id="children"
-                    name="children"
-                    value={
-                      formData.children
-                    }
-                    onChange={handleChange}
-                  >
-                    {[
-                      0, 1, 2, 3, 4, 5, 6,
-                    ].map((number) => (
-                      <option
-                        key={number}
-                        value={number}
-                      >
-                        {number}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </section>
-
-            {/* CONTACT */}
-            <section className="booking-form-section">
-              <div className="booking-section-heading">
-                <span>03</span>
-
-                <div>
-                  <h3>Coordonnées</h3>
-                </div>
-              </div>
-
-              <div className="booking-form-grid">
-                <div className="booking-field booking-field-wide">
-                  <label htmlFor="fullName">
-                    Nom complet
-                  </label>
-
-                  <input
-                    id="fullName"
-                    name="fullName"
-                    type="text"
-                    autoComplete="name"
-                    placeholder="Votre nom complet"
-                    value={
-                      formData.fullName
-                    }
-                    onChange={handleChange}
-                  />
-
-                  {errors.fullName && (
-                    <span className="field-error">
-                      {errors.fullName}
-                    </span>
-                  )}
-                </div>
-
-                <div className="booking-field">
-                  <label htmlFor="phone">
-                    Téléphone
-                  </label>
-
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    placeholder="+229..."
-                    value={formData.phone}
-                    onChange={handleChange}
-                  />
-
-                  {errors.phone && (
-                    <span className="field-error">
-                      {errors.phone}
-                    </span>
-                  )}
-                </div>
-
-                <div className="booking-field">
-                  <label htmlFor="email">
-                    Adresse e-mail
-                  </label>
-
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="nom@exemple.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
-
-                  {errors.email && (
-                    <span className="field-error">
-                      {errors.email}
-                    </span>
-                  )}
-                </div>
-
-                <div className="booking-field booking-field-wide">
-                  <label htmlFor="specialRequest">
-                    Demande particulière
-                    <span>
-                      {" "}
-                      — facultatif
-                    </span>
-                  </label>
-
-                  <textarea
-                    id="specialRequest"
-                    name="specialRequest"
-                    rows="3"
-                    placeholder="Transport, arrivée tardive, préférence particulière..."
-                    value={
-                      formData.specialRequest
-                    }
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* SUMMARY */}
-            <section className="booking-summary">
-              <div className="booking-summary-heading">
-                <span>Résumé</span>
-
                 <span>
-                  {selectedDestination.name}
+                  Voyageurs
                 </span>
+
+                <strong>
+                  {totalGuests}
+                </strong>
               </div>
 
-              <div className="booking-summary-grid">
-                <div>
-                  <span>Durée</span>
+              <div>
+                <span>
+                  Estimation
+                </span>
 
-                  <strong>
-                    {numberOfNights > 0
-                      ? `${numberOfNights} nuitée${
-                          numberOfNights >
-                          1
-                            ? "s"
-                            : ""
-                        }`
-                      : "À déterminer"}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>Voyageurs</span>
-
-                  <strong>
-                    {formData.adults +
-                      formData.children}
-                  </strong>
-                </div>
-
-                <div className="booking-summary-total">
-                  <span>Estimation</span>
-
-                  <strong>
-                    {numberOfNights > 0
-                      ? `${formatFcfa(
-                          estimatedTotal,
-                        )} FCFA`
-                      : `Dès ${formatFcfa(
-                          selectedDestination.startingPriceFcfa,
-                        )} FCFA`}
-                  </strong>
-                </div>
+                <strong>
+                  {numberOfNights > 0
+                    ? `${formatFcfa(
+                        estimatedTotal,
+                      )} FCFA`
+                    : `Dès ${formatFcfa(
+                        selectedDestination.startingPriceFcfa,
+                      )} FCFA`}
+                </strong>
               </div>
-            </section>
+            </div>
 
-            <p className="booking-disclaimer">
-              Les tarifs sont indicatifs.
-              STAY confirmera la disponibilité
-              et le montant final avant toute
-              réservation définitive.
-            </p>
-
-            {submissionMessage.text && (
-              <p
-                className={`booking-submit-message ${submissionMessage.type}`}
-                role="status"
-              >
-                {submissionMessage.text}
-              </p>
-            )}
-
-            <div className="booking-actions">
+            <div className="booking-footer-actions">
               <button
                 type="button"
                 className="booking-primary-action"
-                onClick={handleWhatsApp}
-                disabled={isSubmitting}
+                onClick={
+                  handleWhatsApp
+                }
+                disabled={
+                  isSubmitting
+                }
               >
                 <span>
                   {isSubmitting
@@ -902,18 +1013,29 @@ function Booking() {
                 <ArrowIcon className="booking-action-icon" />
               </button>
 
-              <button
-                type="button"
-                className="booking-secondary-action"
-                onClick={handleCall}
-                disabled={isSubmitting}
+              <a
+                className="booking-call-action"
+                href={`tel:${CONTACT.callNumber}`}
               >
-                ou appeler STAY
-              </button>
+                Appeler STAY
+              </a>
             </div>
-          </form>
-        </section>
-      </div>
+          </footer>
+
+          <p className="booking-disclaimer">
+            Tarif indicatif. STAY confirme la disponibilité et le montant final avant toute réservation définitive.
+          </p>
+
+          {submissionMessage.text && (
+            <p
+              className={`booking-submit-message ${submissionMessage.type}`}
+              role="status"
+            >
+              {submissionMessage.text}
+            </p>
+          )}
+        </div>
+      </section>
     </main>
   );
 }

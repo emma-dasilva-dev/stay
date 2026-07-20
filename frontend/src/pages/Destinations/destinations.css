@@ -290,7 +290,8 @@
 .destination-featured-media {
   position: relative;
 
-  height: clamp(300px, 32vw, 420px);
+  height: 100%;
+  min-height: clamp(300px, 32vw, 420px);
 
   overflow: hidden;
 

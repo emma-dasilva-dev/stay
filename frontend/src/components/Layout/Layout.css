@@ -139,11 +139,11 @@
 ======================================================= */
 
 .booking-theme .logo {
-  color: #ffffff;
+  color: #111418;
 }
 
 .booking-theme .logo-wordmark {
-  color: #ffffff !important;
+  color: #111418 !important;
 }
 
 
@@ -307,7 +307,7 @@
 ======================================================= */
 
 .about-theme {
-  overflow: visible;
+  overflow: hidden;
 }
 
 .about-theme .page-content {
