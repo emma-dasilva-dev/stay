@@ -3,6 +3,20 @@ import { Link } from "react-router-dom";
 import { resolveAssetUrl } from "../../services/api";
 import "./about.css";
 
+function ArrowIcon({ className = "" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M5 15L15 5" />
+      <path d="M7 5H15V13" />
+    </svg>
+  );
+}
+
 function About() {
   const heroVisualRef = useRef(null);
 
@@ -21,10 +35,6 @@ function About() {
     const centerX = bounds.width / 2;
     const centerY = bounds.height / 2;
 
-    /*
-     * Keep the movement deliberately subtle.
-     * STAY should feel premium, not like a CSS playground.
-     */
     const rotateY = ((mouseX - centerX) / centerX) * 2.4;
     const rotateX = -((mouseY - centerY) / centerY) * 1.8;
 
@@ -52,9 +62,7 @@ function About() {
 
   return (
     <main className="about-page">
-      {/* =====================================================
-          HERO
-      ====================================================== */}
+      {/* HERO */}
       <section className="about-hero">
         <div className="about-hero-content">
           <div className="about-hero-copy">
@@ -72,12 +80,12 @@ function About() {
               le Bénin autrement.
             </p>
 
-            <Link to="/destinations" className="about-discover-link">
+            <Link
+              to="/destinations"
+              className="about-link about-discover-link"
+            >
               <span>Découvrir nos destinations</span>
-
-              <span className="about-discover-arrow" aria-hidden="true">
-                →
-              </span>
+              <ArrowIcon className="about-link-icon" />
             </Link>
           </div>
 
@@ -100,39 +108,29 @@ function About() {
                 <div
                   className="about-image-depth"
                   aria-hidden="true"
-                ></div>
+                />
 
                 <div
                   className="about-image-overlay"
                   aria-hidden="true"
-                ></div>
+                />
               </div>
 
               <div
                 className="about-3d-shadow"
                 aria-hidden="true"
-              ></div>
+              />
             </div>
           </div>
         </div>
 
         <div
-          className="about-scroll-indicator"
-          aria-hidden="true"
-        >
-          <span>Défiler</span>
-          <span className="about-scroll-line"></span>
-        </div>
-
-        <div
           className="about-hero-curve"
           aria-hidden="true"
-        ></div>
+        />
       </section>
 
-      {/* =====================================================
-          MANIFESTO
-      ====================================================== */}
+      {/* VISION */}
       <section className="about-manifesto">
         <div
           className="about-manifesto-number"
@@ -153,90 +151,80 @@ function About() {
 
           <div className="about-manifesto-bottom">
             <p>
-              STAY sélectionne des lieux singuliers à travers le Bénin.
-              Des adresses choisies pour leur caractère, leur atmosphère
-              et leur capacité à transformer quelques jours en véritable
+              STAY révèle des adresses singulières à travers le Bénin,
+              choisies pour leur caractère, leur atmosphère et la manière
+              dont elles transforment un simple séjour en véritable
               parenthèse.
             </p>
 
             <Link
               to="/destinations"
-              className="about-text-link"
+              className="about-link about-text-link"
             >
-              Explorer la collection
-
-              <span aria-hidden="true">
-                ↗
-              </span>
+              <span>Explorer la collection</span>
+              <ArrowIcon className="about-link-icon" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* =====================================================
-          FEATURED EXPERIENCE
-      ====================================================== */}
+      {/* STAY SELECTION */}
       <section className="about-feature">
-        <div className="about-feature-heading">
-          <span className="about-section-label">
-            La sélection STAY
-          </span>
-
-          <span className="about-feature-count">
-            01 — 04
-          </span>
-        </div>
-
-        <Link
-          to="/destinations"
-          className="about-feature-card"
-        >
-          <div className="about-feature-image-wrap">
-            <img
-              src={resolveAssetUrl(
-                "/uploads/destinations/hero/card.jpg",
-              )}
-              alt="Découvrir les destinations sélectionnées par STAY"
-              className="about-feature-image"
-            />
-
-            <div
-              className="about-feature-overlay"
-              aria-hidden="true"
-            ></div>
-
-            <span className="about-feature-explore">
-              Explorer
-
-              <span aria-hidden="true">
-                ↗
-              </span>
+        <div className="about-feature-inner">
+          <div className="about-feature-heading">
+            <span className="about-section-label">
+              La sélection STAY
             </span>
           </div>
 
-          <div className="about-feature-info">
-            <div className="about-feature-title-block">
-              <span className="about-feature-kicker">
-                Une autre façon de partir
-              </span>
+          <Link
+            to="/destinations"
+            className="about-feature-card"
+          >
+            <div className="about-feature-image-wrap">
+              <img
+                src={resolveAssetUrl(
+                  "/uploads/destinations/hero/card.jpg",
+                )}
+                alt="Découvrir les destinations sélectionnées par STAY"
+                className="about-feature-image"
+              />
 
-              <h2>
-                Des lieux qui méritent le détour.
-              </h2>
+              <div
+                className="about-feature-overlay"
+                aria-hidden="true"
+              />
             </div>
 
-            <p>
-              Une collection pensée pour celles et ceux qui recherchent
-              plus qu'une chambre : une atmosphère, un rythme et une
-              expérience à retenir.
-            </p>
-          </div>
-        </Link>
+            <div className="about-feature-content">
+              <div>
+                <span className="about-feature-kicker">
+                  Une autre façon de partir
+                </span>
+
+                <h2>
+                  Des lieux qui méritent le détour.
+                </h2>
+              </div>
+
+              <div className="about-feature-copy">
+                <p>
+                  Une collection pensée pour celles et ceux qui recherchent
+                  plus qu&apos;une chambre : une atmosphère, un rythme et une
+                  expérience à retenir.
+                </p>
+
+                <span className="about-feature-action">
+                  <span>Explorer</span>
+                  <ArrowIcon className="about-link-icon" />
+                </span>
+              </div>
+            </div>
+          </Link>
+        </div>
       </section>
 
-      {/* =====================================================
-          FINAL CTA
-      ====================================================== */}
+      {/* FINAL CTA */}
       <section className="about-final">
         <span className="about-final-label">
           Votre prochaine parenthèse
@@ -249,20 +237,15 @@ function About() {
 
         <Link
           to="/booking"
-          className="about-final-button"
+          className="about-link about-final-button"
         >
-          <span>
-            Réserver un séjour
-          </span>
-
-          <span aria-hidden="true">
-            ↗
-          </span>
+          <span>Réserver un séjour</span>
+          <ArrowIcon className="about-link-icon" />
         </Link>
 
         <div className="about-final-footer">
           <span>STAY</span>
-          <span>Cotonou · Bénin</span>
+          <span>Bénin</span>
           <span>Hospitalité sélectionnée</span>
         </div>
       </section>
