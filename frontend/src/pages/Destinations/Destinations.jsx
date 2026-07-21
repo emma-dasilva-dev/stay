@@ -143,9 +143,6 @@ function Destinations() {
     <main className="destinations-page">
       {/* INTRO */}
       <section className="destinations-intro">
-        <span className="destinations-intro-meta">
-          02 / DESTINATIONS
-        </span>
 
         <div className="destinations-intro-content">
           <h1>

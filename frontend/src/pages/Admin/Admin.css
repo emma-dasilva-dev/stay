@@ -1789,3 +1789,1096 @@
     transition: none;
   }
 }
+
+/* =========================================================
+   STAY ADMIN — FINAL PREMIUM REFINEMENT
+   Paste at the END of Admin.css
+========================================================= */
+
+
+/* =========================================================
+   PREMIUM DESIGN TOKENS
+========================================================= */
+
+.admin-page {
+  --admin-elevated:
+    #faf9f6;
+
+  --admin-elevated-soft:
+    rgba(
+      250,
+      249,
+      246,
+      0.78
+    );
+
+  --admin-premium-line:
+    rgba(
+      17,
+      20,
+      24,
+      0.1
+    );
+
+  --admin-shadow:
+    0
+    14px
+    38px
+    rgba(
+      17,
+      20,
+      24,
+      0.045
+    );
+
+  --admin-ease:
+    cubic-bezier(
+      0.16,
+      1,
+      0.3,
+      1
+    );
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.admin-sidebar {
+  background:
+    linear-gradient(
+      165deg,
+      #181b20
+      0%,
+      #121519
+      58%,
+      #0d0f12
+      100%
+    );
+
+  box-shadow:
+    inset
+    -1px
+    0
+    rgba(
+      255,
+      255,
+      255,
+      0.035
+    );
+}
+
+
+.admin-sidebar-nav {
+  gap: 5px;
+
+  margin-top: 58px;
+}
+
+
+.admin-sidebar-nav button {
+  min-height: 43px;
+
+  padding:
+    0
+    12px;
+
+  border-bottom: 0;
+
+  border-radius: 9px;
+
+  transition:
+    color
+    250ms
+    ease,
+    background-color
+    250ms
+    ease,
+    transform
+    350ms
+    var(
+      --admin-ease
+    );
+}
+
+
+.admin-sidebar-nav button:hover {
+  padding-left: 12px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.045
+    );
+
+  transform:
+    translateX(
+      2px
+    );
+}
+
+
+.admin-sidebar-nav button.is-active {
+  padding-left: 12px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.085
+    );
+
+  color:
+    #ffffff;
+}
+
+
+.admin-sidebar-nav button.is-active:hover {
+  transform: none;
+}
+
+
+.admin-sidebar-footer {
+  border-top-color:
+    rgba(
+      255,
+      255,
+      255,
+      0.07
+    );
+}
+
+
+/* =========================================================
+   MAIN HEADER
+========================================================= */
+
+.admin-header {
+  align-items: flex-end;
+}
+
+
+.admin-header h1 {
+  margin:
+    14px
+    0
+    11px;
+
+  font-size:
+    clamp(
+      48px,
+      5.4vw,
+      78px
+    );
+
+  line-height: 0.92;
+}
+
+
+.admin-header p {
+  max-width: 410px;
+
+  font-size: 10px;
+
+  line-height: 1.65;
+}
+
+
+.admin-refresh-button {
+  min-height: 38px;
+
+  padding:
+    9px
+    15px;
+
+  border-color:
+    var(
+      --admin-premium-line
+    );
+
+  background:
+    var(
+      --admin-elevated-soft
+    );
+
+  box-shadow:
+    0
+    5px
+    18px
+    rgba(
+      17,
+      20,
+      24,
+      0.035
+    );
+
+  transition:
+    border-color
+    250ms
+    ease,
+    transform
+    350ms
+    var(
+      --admin-ease
+    );
+}
+
+
+.admin-refresh-button:hover:not(:disabled) {
+  border-color:
+    rgba(
+      17,
+      20,
+      24,
+      0.28
+    );
+
+  transform:
+    translateY(
+      -2px
+    );
+}
+
+
+/* =========================================================
+   DASHBOARD META
+========================================================= */
+
+.admin-dashboard-meta {
+  margin-top: 36px;
+
+  padding-bottom: 12px;
+
+  border-bottom-color:
+    var(
+      --admin-premium-line
+    );
+
+  font-size: 7px;
+}
+
+
+/* =========================================================
+   COMPACT DASHBOARD STAT CARDS
+========================================================= */
+
+.admin-stats {
+  gap: 10px;
+
+  padding-top: 10px;
+
+  border-bottom: 0;
+}
+
+
+.admin-stat-card,
+.admin-stat-card:not(:first-child),
+.admin-stat-card:last-child {
+  min-height: 118px;
+
+  grid-template-columns:
+    20px
+    minmax(
+      0,
+      1fr
+    );
+
+  gap: 9px;
+
+  padding:
+    16px
+    17px !important;
+
+  border:
+    1px solid
+    var(
+      --admin-premium-line
+    ) !important;
+
+  border-radius: 13px;
+
+  background:
+    var(
+      --admin-elevated-soft
+    );
+
+  box-shadow:
+    var(
+      --admin-shadow
+    );
+
+  transition:
+    border-color
+    250ms
+    ease,
+    transform
+    400ms
+    var(
+      --admin-ease
+    ),
+    box-shadow
+    400ms
+    ease;
+}
+
+
+.admin-stat-card:hover {
+  border-color:
+    rgba(
+      17,
+      20,
+      24,
+      0.18
+    ) !important;
+
+  transform:
+    translateY(
+      -3px
+    );
+
+  box-shadow:
+    0
+    18px
+    42px
+    rgba(
+      17,
+      20,
+      24,
+      0.065
+    );
+}
+
+
+.admin-stat-index {
+  padding-top: 2px;
+
+  opacity: 0.65;
+}
+
+
+.admin-stat-card
+div > span {
+  font-size: 7px;
+}
+
+
+.admin-stat-card strong {
+  margin-top: 9px;
+
+  font-size:
+    clamp(
+      30px,
+      3vw,
+      42px
+    );
+
+  line-height: 0.95;
+}
+
+
+.admin-stat-card p {
+  margin-top: 6px;
+
+  font-size: 7px;
+}
+
+
+/* =========================================================
+   DASHBOARD CONTENT
+========================================================= */
+
+.admin-dashboard-grid {
+  gap:
+    clamp(
+      34px,
+      4.5vw,
+      64px
+    );
+
+  margin-top: 50px;
+}
+
+
+.admin-dashboard-summary {
+  align-self: start;
+
+  padding: 23px;
+
+  border:
+    1px solid
+    var(
+      --admin-premium-line
+    );
+
+  border-radius: 15px;
+
+  background:
+    var(
+      --admin-elevated-soft
+    );
+
+  box-shadow:
+    var(
+      --admin-shadow
+    );
+}
+
+
+.admin-dashboard-summary
+.admin-section-heading {
+  padding-bottom: 17px;
+}
+
+
+.admin-dashboard-summary
+.admin-section-heading h2 {
+  font-size:
+    clamp(
+      23px,
+      2.5vw,
+      31px
+    );
+}
+
+
+/* =========================================================
+   SECTION HEADINGS
+========================================================= */
+
+.admin-content-section {
+  margin-top: 58px;
+}
+
+
+.admin-section-heading {
+  padding-bottom: 18px;
+}
+
+
+.admin-section-heading h2 {
+  margin-top: 7px;
+
+  font-size:
+    clamp(
+      25px,
+      2.7vw,
+      37px
+    );
+}
+
+
+/* =========================================================
+   PRIORITY BOOKINGS
+========================================================= */
+
+.admin-booking-row {
+  padding:
+    21px
+    0;
+}
+
+
+.admin-booking-row h3 {
+  margin-top: 7px;
+
+  font-size:
+    19px;
+}
+
+
+.admin-booking-row-bottom {
+  margin-top: 18px;
+}
+
+
+.admin-booking-row-bottom button {
+  transition:
+    gap
+    350ms
+    var(
+      --admin-ease
+    );
+}
+
+
+.admin-booking-row-bottom button:hover {
+  gap: 19px;
+}
+
+
+/* =========================================================
+   RECENT ACTIVITY
+========================================================= */
+
+.admin-recent-list
+> button {
+  padding:
+    15px
+    0;
+
+  transition:
+    padding
+    300ms
+    var(
+      --admin-ease
+    ),
+    background-color
+    250ms
+    ease;
+}
+
+
+.admin-recent-list
+> button:hover {
+  padding-right: 6px;
+
+  padding-left: 6px;
+
+  background:
+    rgba(
+      17,
+      20,
+      24,
+      0.025
+    );
+}
+
+
+.admin-text-link {
+  margin-top: 20px;
+
+  padding-top: 4px;
+
+  transition:
+    padding
+    350ms
+    var(
+      --admin-ease
+    );
+}
+
+
+.admin-text-link:hover {
+  padding-right: 3px;
+}
+
+
+/* =========================================================
+   SEARCH & FILTER TOOLS
+========================================================= */
+
+.admin-booking-tools,
+.admin-customer-tools {
+  margin-top: 22px;
+}
+
+
+.admin-search input,
+.admin-status-filter,
+.admin-customer-search {
+  min-height: 42px;
+
+  border-color:
+    var(
+      --admin-premium-line
+    );
+
+  border-radius: 9px;
+
+  background:
+    rgba(
+      250,
+      249,
+      246,
+      0.72
+    );
+
+  transition:
+    border-color
+    250ms
+    ease,
+    background-color
+    250ms
+    ease;
+}
+
+
+.admin-search input:focus,
+.admin-status-filter:focus,
+.admin-customer-search:focus {
+  border-color:
+    rgba(
+      17,
+      20,
+      24,
+      0.35
+    );
+
+  background:
+    var(
+      --admin-elevated
+    );
+}
+
+
+.admin-search
+> button {
+  border-radius: 9px;
+
+  transition:
+    transform
+    350ms
+    var(
+      --admin-ease
+    ),
+    opacity
+    250ms
+    ease;
+}
+
+
+.admin-search
+> button:hover {
+  transform:
+    translateY(
+      -1px
+    );
+}
+
+
+/* =========================================================
+   PREMIUM TABLE CONTAINERS
+========================================================= */
+
+.admin-desktop-table {
+  overflow: hidden;
+
+  border:
+    1px solid
+    var(
+      --admin-premium-line
+    );
+
+  border-radius: 13px;
+
+  background:
+    rgba(
+      250,
+      249,
+      246,
+      0.62
+    );
+
+  box-shadow:
+    0
+    10px
+    32px
+    rgba(
+      17,
+      20,
+      24,
+      0.035
+    );
+}
+
+
+.admin-bookings-table,
+.admin-customers-table,
+.admin-employees-table {
+  border-top: 0;
+}
+
+
+.admin-bookings-table th,
+.admin-customers-table th,
+.admin-employees-table th {
+  background:
+    rgba(
+      17,
+      20,
+      24,
+      0.022
+    );
+}
+
+
+.admin-bookings-table th,
+.admin-bookings-table td,
+.admin-customers-table th,
+.admin-customers-table td,
+.admin-employees-table th,
+.admin-employees-table td {
+  padding:
+    16px
+    14px;
+}
+
+
+.admin-bookings-table
+tbody tr:hover,
+.admin-customers-table
+tbody tr:hover,
+.admin-employees-table
+tbody tr:hover {
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.58
+    );
+}
+
+
+/* =========================================================
+   VIEW BUTTONS
+========================================================= */
+
+.admin-view-button {
+  border-color:
+    var(
+      --admin-premium-line
+    );
+
+  transition:
+    color
+    250ms
+    ease,
+    background-color
+    250ms
+    ease,
+    border-color
+    250ms
+    ease,
+    transform
+    350ms
+    var(
+      --admin-ease
+    );
+}
+
+
+.admin-view-button:hover {
+  transform:
+    translateY(
+      -1px
+    );
+}
+
+
+/* =========================================================
+   EMPTY STATES
+========================================================= */
+
+.admin-empty-state {
+  padding:
+    38px
+    0;
+}
+
+
+.admin-large-empty-state {
+  min-height: 240px;
+}
+
+
+/* =========================================================
+   TEAM
+========================================================= */
+
+.admin-add-employee {
+  margin-top: 22px;
+
+  padding:
+    10px
+    16px;
+
+  transition:
+    transform
+    350ms
+    var(
+      --admin-ease
+    ),
+    background-color
+    250ms
+    ease;
+}
+
+
+.admin-add-employee:hover {
+  transform:
+    translateY(
+      -2px
+    );
+
+  background:
+    #292d32;
+}
+
+
+/* =========================================================
+   DRAWERS
+========================================================= */
+
+.admin-booking-drawer {
+  padding: 31px;
+
+  border-radius:
+    18px
+    0
+    0
+    18px;
+
+  background:
+    #f8f7f3;
+
+  box-shadow:
+    -24px
+    0
+    70px
+    rgba(
+      17,
+      20,
+      24,
+      0.16
+    );
+}
+
+
+.admin-drawer-backdrop {
+  backdrop-filter:
+    blur(
+      3px
+    );
+}
+
+
+/* =========================================================
+   FORMS INSIDE DRAWERS
+========================================================= */
+
+.admin-status-editor select {
+  border-radius: 8px;
+
+  background:
+    #ffffff;
+}
+
+
+.admin-special-request,
+.admin-customer-empty {
+  border-radius: 9px;
+}
+
+
+.admin-temporary-pin {
+  border-radius: 12px;
+}
+
+
+.admin-save-status {
+  transition:
+    transform
+    350ms
+    var(
+      --admin-ease
+    ),
+    background-color
+    250ms
+    ease;
+}
+
+
+.admin-save-status:hover:not(:disabled) {
+  transform:
+    translateY(
+      -2px
+    );
+
+  background:
+    #292d32;
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (
+  max-width: 1100px
+) {
+
+  .admin-header h1 {
+    font-size:
+      clamp(
+        46px,
+        7vw,
+        68px
+      );
+  }
+
+
+  .admin-stat-card,
+  .admin-stat-card:not(:first-child),
+  .admin-stat-card:last-child {
+    min-height: 108px;
+
+    padding:
+      15px
+      16px !important;
+  }
+
+
+  .admin-stat-card strong {
+    font-size:
+      34px;
+  }
+
+
+  .admin-dashboard-grid {
+    margin-top: 44px;
+  }
+
+
+  .admin-dashboard-summary {
+    padding: 21px;
+  }
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (
+  max-width: 700px
+) {
+
+  .admin-header h1 {
+    font-size:
+      clamp(
+        42px,
+        12vw,
+        58px
+      );
+
+    line-height: 0.94;
+  }
+
+
+  .admin-dashboard-meta {
+    margin-top: 28px;
+  }
+
+
+  .admin-stats {
+    gap: 8px;
+
+    padding-top: 8px;
+  }
+
+
+  .admin-stat-card,
+  .admin-stat-card:not(:first-child),
+  .admin-stat-card:last-child {
+    min-height: 100px;
+
+    grid-template-columns:
+      minmax(
+        0,
+        1fr
+      );
+
+    padding:
+      14px !important;
+
+    border-radius: 11px;
+  }
+
+
+  .admin-stat-index {
+    display: none;
+  }
+
+
+  .admin-stat-card strong {
+    margin-top: 8px;
+
+    font-size: 30px;
+  }
+
+
+  .admin-dashboard-grid {
+    gap: 48px;
+
+    margin-top: 40px;
+  }
+
+
+  .admin-dashboard-summary {
+    padding: 18px;
+
+    border-radius: 13px;
+  }
+
+
+  .admin-booking-row {
+    padding:
+      19px
+      0;
+  }
+
+
+  .admin-content-section {
+    margin-top: 48px;
+  }
+
+
+  .admin-section-heading h2 {
+    font-size:
+      clamp(
+        25px,
+        8vw,
+        34px
+      );
+  }
+
+
+  .admin-booking-tools {
+    gap: 9px;
+  }
+
+
+  .admin-booking-drawer {
+    border-radius: 0;
+  }
+
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (
+  prefers-reduced-motion:
+    reduce
+) {
+
+  .admin-stat-card,
+  .admin-refresh-button,
+  .admin-view-button,
+  .admin-add-employee,
+  .admin-save-status,
+  .admin-sidebar-nav button,
+  .admin-recent-list > button {
+    transition:
+      none !important;
+  }
+
+}

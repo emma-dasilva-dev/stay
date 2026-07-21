@@ -105,9 +105,6 @@ function FAQ() {
     <main className="faq-page">
       {/* HERO */}
       <section className="faq-hero">
-        <span className="faq-hero-meta">
-          04 / FAQ
-        </span>
 
         <div className="faq-hero-content">
           <h1>

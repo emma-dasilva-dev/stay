@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import {
   authApi,
   bookingsApi,
@@ -7,12 +8,15 @@ import {
   getToken,
   saveSession,
 } from "../../services/api";
+
 import "./account.css";
+
 
 const initialLoginForm = {
   email: "",
   password: "",
 };
+
 
 const initialRegisterForm = {
   fullName: "",
@@ -20,6 +24,7 @@ const initialRegisterForm = {
   email: "",
   password: "",
 };
+
 
 const STATUS_LABELS = {
   pending: "En attente",
@@ -29,74 +34,137 @@ const STATUS_LABELS = {
   completed: "Terminée",
 };
 
+
 function formatFcfa(amount) {
-  if (amount === null || amount === undefined) {
+  if (
+    amount === null ||
+    amount === undefined
+  ) {
     return "À déterminer";
   }
 
-  return `${new Intl.NumberFormat("fr-FR").format(amount)} FCFA`;
+  return `${new Intl.NumberFormat(
+    "fr-FR",
+  ).format(amount)} FCFA`;
 }
+
 
 function formatDate(dateValue) {
   if (!dateValue) {
     return "Non renseignée";
   }
 
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(dateValue));
+  return new Intl.DateTimeFormat(
+    "fr-FR",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    },
+  ).format(
+    new Date(dateValue),
+  );
 }
 
-function getTravelersLabel(booking) {
-  const adults = `${booking.adults} adulte${
-    booking.adults > 1 ? "s" : ""
-  }`;
+
+function getTravelersLabel(
+  booking,
+) {
+  const adults =
+    `${booking.adults} adulte${
+      booking.adults > 1
+        ? "s"
+        : ""
+    }`;
 
   if (!booking.children) {
     return adults;
   }
 
   return `${adults}, ${booking.children} enfant${
-    booking.children > 1 ? "s" : ""
+    booking.children > 1
+      ? "s"
+      : ""
   }`;
 }
 
+
 function Account() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const [activeMode, setActiveMode] = useState("login");
 
-  const [loginForm, setLoginForm] =
-    useState(initialLoginForm);
+  const [
+    activeMode,
+    setActiveMode,
+  ] = useState("login");
 
-  const [registerForm, setRegisterForm] =
-    useState(initialRegisterForm);
 
-  const [user, setUser] = useState(null);
-  const [bookings, setBookings] = useState([]);
+  const [
+    loginForm,
+    setLoginForm,
+  ] = useState(
+    initialLoginForm,
+  );
 
-  const [isCheckingSession, setIsCheckingSession] =
-    useState(true);
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
+  const [
+    registerForm,
+    setRegisterForm,
+  ] = useState(
+    initialRegisterForm,
+  );
 
-  const [isLoadingBookings, setIsLoadingBookings] =
-    useState(false);
 
-  const [bookingsError, setBookingsError] =
-    useState("");
+  const [
+    user,
+    setUser,
+  ] = useState(null);
 
-  const [message, setMessage] = useState({
+
+  const [
+    bookings,
+    setBookings,
+  ] = useState([]);
+
+
+  const [
+    isCheckingSession,
+    setIsCheckingSession,
+  ] = useState(true);
+
+
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
+
+
+  const [
+    isLoadingBookings,
+    setIsLoadingBookings,
+  ] = useState(false);
+
+
+  const [
+    bookingsError,
+    setBookingsError,
+  ] = useState("");
+
+
+  const [
+    message,
+    setMessage,
+  ] = useState({
     type: "",
     text: "",
   });
 
+
   useEffect(() => {
     restoreSession();
   }, []);
+
 
   useEffect(() => {
     if (user) {
@@ -107,61 +175,88 @@ function Account() {
     }
   }, [user]);
 
+
   async function restoreSession() {
-    const token = getToken();
+    const token =
+      getToken();
 
     if (!token) {
-      setIsCheckingSession(false);
+      setIsCheckingSession(
+        false,
+      );
+
       return;
     }
 
     try {
-      const data = await authApi.me();
+      const data =
+        await authApi.me();
 
-      if (data.user.role === "admin") {
-        navigate("/admin", {
-          replace: true,
-        });
+      if (
+        data.user.role ===
+        "admin"
+      ) {
+        navigate(
+          "/admin",
+          {
+            replace: true,
+          },
+        );
 
         return;
       }
 
-      setUser(data.user);
+      setUser(
+        data.user,
+      );
     } catch (error) {
       clearSession();
 
       setMessage({
         type: "error",
+
         text:
           error.message ||
           "Votre session a expiré. Veuillez vous reconnecter.",
       });
     } finally {
-      setIsCheckingSession(false);
+      setIsCheckingSession(
+        false,
+      );
     }
   }
+
 
   async function loadBookings() {
     if (!getToken()) {
       return;
     }
 
-    setIsLoadingBookings(true);
+    setIsLoadingBookings(
+      true,
+    );
+
     setBookingsError("");
 
     try {
-      const data = await bookingsApi.myBookings();
+      const data =
+        await bookingsApi.myBookings();
 
-      setBookings(data.bookings || []);
+      setBookings(
+        data.bookings || [],
+      );
     } catch (error) {
       setBookingsError(
         error.message ||
           "Impossible de charger vos réservations.",
       );
     } finally {
-      setIsLoadingBookings(false);
+      setIsLoadingBookings(
+        false,
+      );
     }
   }
+
 
   function clearMessage() {
     if (!message.text) {
@@ -174,27 +269,50 @@ function Account() {
     });
   }
 
-  function handleLoginChange(event) {
-    const { name, value } = event.target;
 
-    setLoginForm((currentForm) => ({
-      ...currentForm,
-      [name]: value,
-    }));
+  function handleLoginChange(
+    event,
+  ) {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setLoginForm(
+      (
+        currentForm,
+      ) => ({
+        ...currentForm,
+
+        [name]: value,
+      }),
+    );
 
     clearMessage();
   }
 
-  function handleRegisterChange(event) {
-    const { name, value } = event.target;
 
-    setRegisterForm((currentForm) => ({
-      ...currentForm,
-      [name]: value,
-    }));
+  function handleRegisterChange(
+    event,
+  ) {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setRegisterForm(
+      (
+        currentForm,
+      ) => ({
+        ...currentForm,
+
+        [name]: value,
+      }),
+    );
 
     clearMessage();
   }
+
 
   function changeMode(mode) {
     setActiveMode(mode);
@@ -205,7 +323,10 @@ function Account() {
     });
   }
 
-  async function handleLogin(event) {
+
+  async function handleLogin(
+    event,
+  ) {
     event.preventDefault();
 
     if (
@@ -214,6 +335,7 @@ function Account() {
     ) {
       setMessage({
         type: "error",
+
         text:
           "Renseignez votre adresse e-mail et votre mot de passe.",
       });
@@ -222,48 +344,70 @@ function Account() {
     }
 
     setIsSubmitting(true);
+
     clearMessage();
 
     try {
-      const data = await authApi.login({
-        email: loginForm.email.trim(),
-        password: loginForm.password,
-      });
+      const data =
+        await authApi.login({
+          email:
+            loginForm.email.trim(),
+
+          password:
+            loginForm.password,
+        });
 
       saveSession(
         data.token,
         data.user,
       );
 
-      setLoginForm(initialLoginForm);
+      setLoginForm(
+        initialLoginForm,
+      );
 
-      if (data.user.role === "admin") {
-        navigate("/admin", {
-          replace: true,
-        });
+      if (
+        data.user.role ===
+        "admin"
+      ) {
+        navigate(
+          "/admin",
+          {
+            replace: true,
+          },
+        );
 
         return;
       }
 
-      setUser(data.user);
+      setUser(
+        data.user,
+      );
 
       setMessage({
         type: "success",
-        text: "Connexion réussie.",
+        text:
+          "Connexion réussie.",
       });
     } catch (error) {
       setMessage({
         type: "error",
+
         text:
           error.message ||
           "Impossible de vous connecter pour le moment.",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(
+        false,
+      );
     }
   }
 
-  async function handleRegister(event) {
+
+  async function handleRegister(
+    event,
+  ) {
     event.preventDefault();
 
     const fullName =
@@ -278,9 +422,15 @@ function Account() {
     const password =
       registerForm.password;
 
-    if (!fullName || !email || !password) {
+
+    if (
+      !fullName ||
+      !email ||
+      !password
+    ) {
       setMessage({
         type: "error",
+
         text:
           "Le nom complet, l’adresse e-mail et le mot de passe sont obligatoires.",
       });
@@ -288,9 +438,13 @@ function Account() {
       return;
     }
 
-    if (password.length < 8) {
+
+    if (
+      password.length < 8
+    ) {
       setMessage({
         type: "error",
+
         text:
           "Le mot de passe doit contenir au moins 8 caractères.",
       });
@@ -298,23 +452,29 @@ function Account() {
       return;
     }
 
+
     setIsSubmitting(true);
+
     clearMessage();
 
+
     try {
-      const data = await authApi.register({
-        fullName,
-        phone,
-        email,
-        password,
-      });
+      const data =
+        await authApi.register({
+          fullName,
+          phone,
+          email,
+          password,
+        });
 
       saveSession(
         data.token,
         data.user,
       );
 
-      setUser(data.user);
+      setUser(
+        data.user,
+      );
 
       setRegisterForm(
         initialRegisterForm,
@@ -322,41 +482,56 @@ function Account() {
 
       setMessage({
         type: "success",
+
         text:
           "Votre compte STAY a été créé.",
       });
     } catch (error) {
       setMessage({
         type: "error",
+
         text:
           error.message ||
           "Impossible de créer le compte pour le moment.",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(
+        false,
+      );
     }
   }
+
 
   function handleLogout() {
     clearSession();
 
     setUser(null);
+
     setBookings([]);
 
-    setActiveMode("login");
+    setActiveMode(
+      "login",
+    );
 
     setMessage({
       type: "success",
+
       text:
         "Vous avez été déconnecté.",
     });
   }
 
-  if (isCheckingSession) {
+
+  if (
+    isCheckingSession
+  ) {
     return (
       <main className="account-page account-loading-page">
         <div className="account-loading">
-          <span className="account-loader" />
+          <span
+            className="account-loader"
+            aria-hidden="true"
+          />
 
           <span>
             Chargement de votre espace
@@ -366,28 +541,45 @@ function Account() {
     );
   }
 
+
   return (
     <main className="account-page">
       {user ? (
         <AuthenticatedAccount
           user={user}
-          bookings={bookings}
-          bookingsError={bookingsError}
+          bookings={
+            bookings
+          }
+          bookingsError={
+            bookingsError
+          }
           isLoadingBookings={
             isLoadingBookings
           }
-          message={message}
+          message={
+            message
+          }
           onReloadBookings={
             loadBookings
           }
-          onLogout={handleLogout}
+          onLogout={
+            handleLogout
+          }
         />
       ) : (
         <GuestAccount
-          activeMode={activeMode}
-          loginForm={loginForm}
-          registerForm={registerForm}
-          message={message}
+          activeMode={
+            activeMode
+          }
+          loginForm={
+            loginForm
+          }
+          registerForm={
+            registerForm
+          }
+          message={
+            message
+          }
           isSubmitting={
             isSubmitting
           }
@@ -400,7 +592,9 @@ function Account() {
           onRegisterChange={
             handleRegisterChange
           }
-          onLogin={handleLogin}
+          onLogin={
+            handleLogin
+          }
           onRegister={
             handleRegister
           }
@@ -409,6 +603,7 @@ function Account() {
     </main>
   );
 }
+
 
 function GuestAccount({
   activeMode,
@@ -423,362 +618,424 @@ function GuestAccount({
   onRegister,
 }) {
   const isLogin =
-    activeMode === "login";
+    activeMode ===
+    "login";
+
 
   return (
     <div className="account-guest">
-      {/* =========================================
-          EDITORIAL SIDE
-      ========================================== */}
 
-      <section className="account-guest-intro">
-        <div className="account-intro-meta">
-  <span>
-    05 / COMPTE
-  </span>
+      <div className="account-guest-card">
 
-  <div className="account-intro-meta-right">
-    <span>
-      ESPACE PERSONNEL
-    </span>
+        {/* =========================================
+            ABSTRACT SIDE
+        ========================================== */}
 
-    <Link
-      to="/staff"
-      className="account-team-access"
-    >
-      ACCÈS ÉQUIPE
-      <span aria-hidden="true">
-        ↗
-      </span>
-    </Link>
-  </div>
-</div>
-
-
-        <div className="account-intro-main">
-          <h1>
-            Votre espace.
-            <span>À vous.</span>
-          </h1>
-
-          <p>
-            Retrouvez vos demandes,
-            suivez leur évolution et gardez
-            vos informations au même endroit.
-          </p>
-        </div>
-
-        <div className="account-intro-footer">
-          <span>Réservations</span>
-
-          <span>Suivi</span>
-
-          <span>Profil</span>
-        </div>
-
-        <div
-          className="account-orbit"
-          aria-hidden="true"
-        >
-          <span />
-          <span />
-          <span />
-        </div>
-      </section>
-
-      {/* =========================================
-          AUTHENTICATION SIDE
-      ========================================== */}
-
-      <section className="account-auth-zone">
-        <div className="account-auth-inner">
-          <div className="account-auth-heading">
-            <span>
-              {isLogin
-                ? "Bienvenue"
-                : "Première visite"}
-            </span>
-
-            <h2>
-              {isLogin
-                ? "Se retrouver."
-                : "Créer votre espace."}
-            </h2>
-          </div>
+        <section className="account-guest-intro">
 
           <div
-            className="account-tabs"
-            role="tablist"
-            aria-label="Authentification"
+            className="account-abstract-art"
+            aria-hidden="true"
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={
-                isLogin
-              }
-              className={
-                isLogin
-                  ? "is-active"
-                  : ""
-              }
-              onClick={() =>
-                onModeChange(
-                  "login",
-                )
-              }
-            >
-              Connexion
-            </button>
+            <span className="account-abstract-glow account-abstract-glow-one" />
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={
-                !isLogin
-              }
-              className={
-                !isLogin
-                  ? "is-active"
-                  : ""
-              }
-              onClick={() =>
-                onModeChange(
-                  "register",
-                )
-              }
-            >
-              Créer un compte
-            </button>
+            <span className="account-abstract-glow account-abstract-glow-two" />
+
+            <span className="account-abstract-ring account-abstract-ring-one" />
+
+            <span className="account-abstract-ring account-abstract-ring-two" />
+
+            <span className="account-abstract-plane account-abstract-plane-one" />
+
+            <span className="account-abstract-plane account-abstract-plane-two" />
+
+            <span className="account-abstract-axis" />
+
+            <span className="account-abstract-point" />
           </div>
 
-          {message.text && (
-            <p
-              className={`account-message ${message.type}`}
-              role="status"
+
+          <div className="account-intro-statement">
+            <h1>
+              Votre espace,
+              <span>
+                simplement.
+              </span>
+            </h1>
+          </div>
+
+        </section>
+
+
+        {/* =========================================
+            AUTHENTICATION
+        ========================================== */}
+
+        <section className="account-auth-zone">
+
+          <div className="account-auth-inner">
+
+            <header className="account-auth-heading">
+              <span>
+                Espace personnel
+              </span>
+
+              <h2>
+                {isLogin
+                  ? "Bon retour."
+                  : "Créer votre espace."}
+              </h2>
+
+              <p>
+                {isLogin
+                  ? "Connectez-vous pour retrouver et suivre vos demandes de séjour."
+                  : "Créez votre compte pour retrouver vos demandes et suivre leur évolution."}
+              </p>
+            </header>
+
+
+            <div
+              className="account-tabs"
+              role="tablist"
+              aria-label="Authentification"
             >
-              {message.text}
-            </p>
-          )}
-
-          {isLogin ? (
-            <form
-              className="account-form account-login-form"
-              onSubmit={onLogin}
-            >
-              <div className="account-field">
-                <label htmlFor="login-email">
-                  Adresse e-mail
-                </label>
-
-                <input
-                  id="login-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="nom@exemple.com"
-                  value={
-                    loginForm.email
-                  }
-                  onChange={
-                    onLoginChange
-                  }
-                />
-              </div>
-
-              <div className="account-field">
-                <label htmlFor="login-password">
-                  Mot de passe
-                </label>
-
-                <input
-                  id="login-password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="Votre mot de passe"
-                  value={
-                    loginForm.password
-                  }
-                  onChange={
-                    onLoginChange
-                  }
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="account-primary-button"
-                disabled={
-                  isSubmitting
-                }
-              >
-                <span>
-                  {isSubmitting
-                    ? "Connexion..."
-                    : "Se connecter"}
-                </span>
-
-                <span
-                  aria-hidden="true"
-                >
-                  ↗
-                </span>
-              </button>
-
               <button
                 type="button"
-                className="account-switch-link"
-                onClick={() =>
-                  onModeChange(
-                    "register",
-                  )
+                role="tab"
+                aria-selected={
+                  isLogin
                 }
-              >
-                Pas encore de compte ?
-                <span>
-                  Créer un compte
-                </span>
-              </button>
-            </form>
-          ) : (
-            <form
-              className="account-form account-register-form"
-              onSubmit={
-                onRegister
-              }
-            >
-              <div className="account-field">
-                <label htmlFor="register-name">
-                  Nom complet
-                </label>
-
-                <input
-                  id="register-name"
-                  name="fullName"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="Votre nom complet"
-                  value={
-                    registerForm.fullName
-                  }
-                  onChange={
-                    onRegisterChange
-                  }
-                />
-              </div>
-
-              <div className="account-field">
-                <label htmlFor="register-phone">
-                  Téléphone
-                </label>
-
-                <input
-                  id="register-phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="+229..."
-                  value={
-                    registerForm.phone
-                  }
-                  onChange={
-                    onRegisterChange
-                  }
-                />
-              </div>
-
-              <div className="account-field account-field-wide">
-                <label htmlFor="register-email">
-                  Adresse e-mail
-                </label>
-
-                <input
-                  id="register-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="nom@exemple.com"
-                  value={
-                    registerForm.email
-                  }
-                  onChange={
-                    onRegisterChange
-                  }
-                />
-              </div>
-
-              <div className="account-field account-field-wide">
-                <label htmlFor="register-password">
-                  Mot de passe
-                </label>
-
-                <input
-                  id="register-password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="8 caractères minimum"
-                  value={
-                    registerForm.password
-                  }
-                  onChange={
-                    onRegisterChange
-                  }
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="account-primary-button account-field-wide"
-                disabled={
-                  isSubmitting
+                className={
+                  isLogin
+                    ? "is-active"
+                    : ""
                 }
-              >
-                <span>
-                  {isSubmitting
-                    ? "Création..."
-                    : "Créer mon compte"}
-                </span>
-
-                <span
-                  aria-hidden="true"
-                >
-                  ↗
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className="account-switch-link account-field-wide"
                 onClick={() =>
                   onModeChange(
                     "login",
                   )
                 }
               >
-                Déjà inscrit ?
-                <span>
-                  Se connecter
-                </span>
+                Connexion
               </button>
-            </form>
-          )}
 
-          <div className="account-auth-note">
-            <span>STAY</span>
 
-            <p>
-              Vos informations sont utilisées
-              uniquement pour gérer votre compte
-              et vos demandes de réservation.
-            </p>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={
+                  !isLogin
+                }
+                className={
+                  !isLogin
+                    ? "is-active"
+                    : ""
+                }
+                onClick={() =>
+                  onModeChange(
+                    "register",
+                  )
+                }
+              >
+                Créer un compte
+              </button>
+            </div>
+
+
+            {message.text && (
+              <p
+                className={`account-message ${message.type}`}
+                role="status"
+              >
+                {
+                  message.text
+                }
+              </p>
+            )}
+
+
+            {isLogin ? (
+
+              <form
+                className="account-form account-login-form"
+                onSubmit={
+                  onLogin
+                }
+              >
+
+                <div className="account-field">
+                  <label
+                    htmlFor="login-email"
+                  >
+                    Adresse e-mail
+                  </label>
+
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="nom@exemple.com"
+                    value={
+                      loginForm.email
+                    }
+                    onChange={
+                      onLoginChange
+                    }
+                  />
+                </div>
+
+
+                <div className="account-field">
+                  <label
+                    htmlFor="login-password"
+                  >
+                    Mot de passe
+                  </label>
+
+                  <input
+                    id="login-password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Votre mot de passe"
+                    value={
+                      loginForm.password
+                    }
+                    onChange={
+                      onLoginChange
+                    }
+                  />
+                </div>
+
+
+                <button
+                  type="submit"
+                  className="account-primary-button"
+                  disabled={
+                    isSubmitting
+                  }
+                >
+                  <span>
+                    {isSubmitting
+                      ? "Connexion..."
+                      : "Se connecter"}
+                  </span>
+
+                  <span
+                    className="account-button-arrow"
+                    aria-hidden="true"
+                  >
+                    ↗
+                  </span>
+                </button>
+
+
+                <button
+                  type="button"
+                  className="account-switch-link"
+                  onClick={() =>
+                    onModeChange(
+                      "register",
+                    )
+                  }
+                >
+                  Pas encore de compte ?
+
+                  <span>
+                    Créer un compte
+                  </span>
+                </button>
+
+              </form>
+
+            ) : (
+
+              <form
+                className="account-form account-register-form"
+                onSubmit={
+                  onRegister
+                }
+              >
+
+                <div className="account-field">
+                  <label
+                    htmlFor="register-name"
+                  >
+                    Nom complet
+                  </label>
+
+                  <input
+                    id="register-name"
+                    name="fullName"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Votre nom complet"
+                    value={
+                      registerForm.fullName
+                    }
+                    onChange={
+                      onRegisterChange
+                    }
+                  />
+                </div>
+
+
+                <div className="account-field">
+                  <label
+                    htmlFor="register-phone"
+                  >
+                    Téléphone
+                  </label>
+
+                  <input
+                    id="register-phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="+229..."
+                    value={
+                      registerForm.phone
+                    }
+                    onChange={
+                      onRegisterChange
+                    }
+                  />
+                </div>
+
+
+                <div className="account-field account-field-wide">
+                  <label
+                    htmlFor="register-email"
+                  >
+                    Adresse e-mail
+                  </label>
+
+                  <input
+                    id="register-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="nom@exemple.com"
+                    value={
+                      registerForm.email
+                    }
+                    onChange={
+                      onRegisterChange
+                    }
+                  />
+                </div>
+
+
+                <div className="account-field account-field-wide">
+                  <label
+                    htmlFor="register-password"
+                  >
+                    Mot de passe
+                  </label>
+
+                  <input
+                    id="register-password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="8 caractères minimum"
+                    value={
+                      registerForm.password
+                    }
+                    onChange={
+                      onRegisterChange
+                    }
+                  />
+                </div>
+
+
+                <button
+                  type="submit"
+                  className="account-primary-button account-field-wide"
+                  disabled={
+                    isSubmitting
+                  }
+                >
+                  <span>
+                    {isSubmitting
+                      ? "Création..."
+                      : "Créer mon compte"}
+                  </span>
+
+                  <span
+                    className="account-button-arrow"
+                    aria-hidden="true"
+                  >
+                    ↗
+                  </span>
+                </button>
+
+
+                <button
+                  type="button"
+                  className="account-switch-link account-field-wide"
+                  onClick={() =>
+                    onModeChange(
+                      "login",
+                    )
+                  }
+                >
+                  Déjà inscrit ?
+
+                  <span>
+                    Se connecter
+                  </span>
+                </button>
+
+              </form>
+
+            )}
+
+
+            <div className="account-auth-note">
+              <span>
+                STAY
+              </span>
+
+              <p>
+                Vos informations sont utilisées uniquement pour gérer votre compte et vos demandes de réservation.
+              </p>
+            </div>
+
           </div>
-        </div>
-      </section>
+        </section>
+
+      </div>
+
+
+      {/* =========================================
+          DISCREET STAFF ACCESS
+      ========================================== */}
+
+      <div className="account-team-row">
+        <span>
+          Vous faites partie de l&apos;équipe ?
+        </span>
+
+        <Link
+          to="/staff"
+          className="account-team-access"
+        >
+          Accès équipe
+
+          <span
+            aria-hidden="true"
+          >
+            ↗
+          </span>
+        </Link>
+      </div>
+
     </div>
   );
 }
+
 
 function AuthenticatedAccount({
   user,
@@ -795,13 +1052,16 @@ function AuthenticatedAccount({
       .split(/\s+/)[0] ||
     "Client";
 
+
   return (
     <div className="account-member">
+
       {/* =========================================
           MEMBER HERO
       ========================================== */}
 
       <header className="account-member-hero">
+
         <div className="account-member-meta">
           <span>
             05 / VOTRE ESPACE
@@ -810,7 +1070,10 @@ function AuthenticatedAccount({
           <span>
             {String(
               bookings.length,
-            ).padStart(2, "0")}{" "}
+            ).padStart(
+              2,
+              "0",
+            )}{" "}
             demande
             {bookings.length > 1
               ? "s"
@@ -818,11 +1081,16 @@ function AuthenticatedAccount({
           </span>
         </div>
 
+
         <div className="account-member-heading">
+
           <h1>
             Bonjour,
-            <span>{firstName}.</span>
+            <span>
+              {firstName}.
+            </span>
           </h1>
+
 
           <div className="account-member-actions">
             <Link
@@ -838,8 +1106,11 @@ function AuthenticatedAccount({
               </span>
             </Link>
           </div>
+
         </div>
+
       </header>
+
 
       {message.text && (
         <div className="account-global-message">
@@ -847,18 +1118,24 @@ function AuthenticatedAccount({
             className={`account-message ${message.type}`}
             role="status"
           >
-            {message.text}
+            {
+              message.text
+            }
           </p>
         </div>
       )}
+
 
       {/* =========================================
           DASHBOARD
       ========================================== */}
 
       <div className="account-dashboard">
+
         <section className="account-bookings">
+
           <div className="account-section-heading">
+
             <div>
               <span>
                 Réservations
@@ -869,16 +1146,25 @@ function AuthenticatedAccount({
               </h2>
             </div>
 
+
             <span className="booking-count">
               {String(
                 bookings.length,
-              ).padStart(2, "0")}
+              ).padStart(
+                2,
+                "0",
+              )}
             </span>
+
           </div>
+
 
           {isLoadingBookings && (
             <div className="bookings-loading">
-              <span className="account-loader" />
+              <span
+                className="account-loader"
+                aria-hidden="true"
+              />
 
               <p>
                 Chargement de vos demandes...
@@ -886,15 +1172,19 @@ function AuthenticatedAccount({
             </div>
           )}
 
+
           {!isLoadingBookings &&
             bookingsError && (
               <div className="bookings-error">
+
                 <span>
                   Une erreur est survenue.
                 </span>
 
                 <p>
-                  {bookingsError}
+                  {
+                    bookingsError
+                  }
                 </p>
 
                 <button
@@ -905,16 +1195,21 @@ function AuthenticatedAccount({
                 >
                   Réessayer
                 </button>
+
               </div>
             )}
 
+
           {!isLoadingBookings &&
             !bookingsError &&
-            bookings.length === 0 && (
+            bookings.length ===
+              0 && (
               <div className="empty-bookings">
+
                 <span className="empty-bookings-index">
                   00
                 </span>
+
 
                 <div>
                   <h3>
@@ -922,9 +1217,7 @@ function AuthenticatedAccount({
                   </h3>
 
                   <p>
-                    Vos futures demandes apparaîtront
-                    ici avec leur statut et leurs
-                    informations principales.
+                    Vos futures demandes apparaîtront ici avec leur statut et leurs informations principales.
                   </p>
 
                   <Link
@@ -940,13 +1233,17 @@ function AuthenticatedAccount({
                     </span>
                   </Link>
                 </div>
+
               </div>
             )}
 
+
           {!isLoadingBookings &&
             !bookingsError &&
-            bookings.length > 0 && (
+            bookings.length >
+              0 && (
               <div className="booking-history">
+
                 {bookings.map(
                   (
                     booking,
@@ -958,6 +1255,7 @@ function AuthenticatedAccount({
                       }
                       className="booking-history-item"
                     >
+
                       <div className="booking-history-index">
                         {String(
                           index + 1,
@@ -967,8 +1265,11 @@ function AuthenticatedAccount({
                         )}
                       </div>
 
+
                       <div className="booking-history-main">
+
                         <div className="booking-history-top">
+
                           <div>
                             <span className="booking-reference">
                               {
@@ -989,6 +1290,7 @@ function AuthenticatedAccount({
                             </p>
                           </div>
 
+
                           <span
                             className={`booking-status ${
                               booking.status ||
@@ -996,14 +1298,16 @@ function AuthenticatedAccount({
                             }`}
                           >
                             {STATUS_LABELS[
-                              booking
-                                .status
+                              booking.status
                             ] ||
                               booking.status}
                           </span>
+
                         </div>
 
+
                         <div className="booking-history-details">
+
                           <div>
                             <span>
                               Séjour
@@ -1020,6 +1324,7 @@ function AuthenticatedAccount({
                             </strong>
                           </div>
 
+
                           <div>
                             <span>
                               Voyageurs
@@ -1032,6 +1337,7 @@ function AuthenticatedAccount({
                             </strong>
                           </div>
 
+
                           <div className="booking-history-price">
                             <span>
                               Estimation
@@ -1043,21 +1349,29 @@ function AuthenticatedAccount({
                               )}
                             </strong>
                           </div>
+
                         </div>
+
                       </div>
+
                     </article>
                   ),
                 )}
+
               </div>
             )}
+
         </section>
+
 
         {/* =========================================
             PROFILE
         ========================================== */}
 
         <aside className="account-profile">
+
           <div className="account-profile-sticky">
+
             <div className="account-section-heading">
               <div>
                 <span>
@@ -1070,6 +1384,7 @@ function AuthenticatedAccount({
               </div>
             </div>
 
+
             <div className="profile-monogram">
               <span>
                 {firstName
@@ -1078,16 +1393,21 @@ function AuthenticatedAccount({
               </span>
             </div>
 
+
             <dl className="profile-details">
+
               <div>
                 <dt>
                   Nom complet
                 </dt>
 
                 <dd>
-                  {user.fullName}
+                  {
+                    user.fullName
+                  }
                 </dd>
               </div>
+
 
               <div>
                 <dt>
@@ -1095,9 +1415,12 @@ function AuthenticatedAccount({
                 </dt>
 
                 <dd>
-                  {user.email}
+                  {
+                    user.email
+                  }
                 </dd>
               </div>
+
 
               <div>
                 <dt>
@@ -1109,6 +1432,7 @@ function AuthenticatedAccount({
                     "Non renseigné"}
                 </dd>
               </div>
+
 
               <div>
                 <dt>
@@ -1122,7 +1446,9 @@ function AuthenticatedAccount({
                     : "Client"}
                 </dd>
               </div>
+
             </dl>
+
 
             <button
               type="button"
@@ -1139,12 +1465,19 @@ function AuthenticatedAccount({
                 ↗
               </span>
             </button>
+
           </div>
+
         </aside>
+
       </div>
 
+
       <footer className="account-footer">
-        <span>STAY</span>
+
+        <span>
+          STAY
+        </span>
 
         <span>
           Cotonou · Bénin
@@ -1153,9 +1486,12 @@ function AuthenticatedAccount({
         <span>
           Espace personnel
         </span>
+
       </footer>
+
     </div>
   );
 }
+
 
 export default Account;

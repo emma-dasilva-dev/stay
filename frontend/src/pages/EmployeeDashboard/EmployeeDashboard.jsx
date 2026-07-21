@@ -21,11 +21,13 @@ import {
 
 import "./EmployeeDashboard.css";
 
+
 const ROLE_LABELS = {
   manager: "Manager",
   reservation_agent:
     "Agent de réservation",
 };
+
 
 const STATUS_LABELS = {
   pending: "En attente",
@@ -34,6 +36,7 @@ const STATUS_LABELS = {
   cancelled: "Annulée",
   completed: "Terminée",
 };
+
 
 const BOOKING_STATUSES = [
   {
@@ -58,6 +61,7 @@ const BOOKING_STATUSES = [
   },
 ];
 
+
 const NAVIGATION_ITEMS = [
   {
     id: "dashboard",
@@ -77,6 +81,12 @@ const NAVIGATION_ITEMS = [
   },
 ];
 
+
+/* =========================================================
+   FORMATTERS
+========================================================= */
+
+
 function formatDate(value) {
   if (!value) {
     return "—";
@@ -84,7 +94,9 @@ function formatDate(value) {
 
   if (
     typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}/.test(value)
+    /^\d{4}-\d{2}-\d{2}/.test(
+      value,
+    )
   ) {
     const [
       year,
@@ -132,6 +144,7 @@ function formatDate(value) {
   ).format(date);
 }
 
+
 function formatPrice(value) {
   if (
     value === null ||
@@ -140,91 +153,267 @@ function formatPrice(value) {
     return "—";
   }
 
+  return `${new Intl.NumberFormat(
+    "fr-FR",
+  ).format(
+    Number(value),
+  )} FCFA`;
+}
+
+
+function formatContactMethod(
+  value,
+) {
+  const labels = {
+    whatsapp: "WhatsApp",
+    call: "Téléphone",
+    phone: "Téléphone",
+  };
+
   return (
-    new Intl.NumberFormat(
-      "fr-FR",
-    ).format(
-      Number(value),
-    ) + " FCFA"
+    labels[value] ||
+    value ||
+    "—"
   );
 }
+
+
+function formatTravelers(
+  booking,
+) {
+  const adults =
+    Number(
+      booking.adults,
+    ) || 0;
+
+  const children =
+    Number(
+      booking.children,
+    ) || 0;
+
+  const adultLabel =
+    `${adults} adulte${
+      adults > 1
+        ? "s"
+        : ""
+    }`;
+
+  if (!children) {
+    return adultLabel;
+  }
+
+  return `${adultLabel}, ${children} enfant${
+    children > 1
+      ? "s"
+      : ""
+  }`;
+}
+
+
+function getInitials(
+  fullName,
+) {
+  if (!fullName) {
+    return "ST";
+  }
+
+  const parts =
+    fullName
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  if (
+    parts.length === 1
+  ) {
+    return parts[0]
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  return `${parts[0][0]}${
+    parts[
+      parts.length - 1
+    ][0]
+  }`.toUpperCase();
+}
+
+
+function normalizePhoneForWhatsApp(
+  phone,
+) {
+  if (!phone) {
+    return "";
+  }
+
+  let digits =
+    String(phone).replace(
+      /\D/g,
+      "",
+    );
+
+  if (!digits) {
+    return "";
+  }
+
+  if (
+    digits.startsWith(
+      "00",
+    )
+  ) {
+    digits =
+      digits.slice(2);
+  }
+
+  if (
+    digits.startsWith(
+      "229",
+    )
+  ) {
+    return digits;
+  }
+
+  if (
+    digits.length === 8
+  ) {
+    return `22901${digits}`;
+  }
+
+  if (
+    digits.startsWith(
+      "0",
+    )
+  ) {
+    return `229${digits}`;
+  }
+
+  return digits;
+}
+
+
+function bookingBelongsToCustomer(
+  booking,
+  customerId,
+) {
+  const bookingCustomerId =
+    booking.userId ??
+    booking.customer?.id;
+
+  return (
+    Number(
+      bookingCustomerId,
+    ) ===
+    Number(
+      customerId,
+    )
+  );
+}
+
+
+function handleInteractiveRowKeyDown(
+  event,
+  action,
+) {
+  if (
+    event.key ===
+      "Enter" ||
+    event.key ===
+      " "
+  ) {
+    event.preventDefault();
+
+    action();
+  }
+}
+
+
+/* =========================================================
+   MAIN DASHBOARD
+========================================================= */
+
 
 function EmployeeDashboard() {
   const navigate =
     useNavigate();
 
+
   const [
     employee,
     setEmployee,
-  ] =
-    useState(
-      getStoredEmployee(),
-    );
+  ] = useState(
+    getStoredEmployee(),
+  );
+
 
   const [
     activeSection,
     setActiveSection,
-  ] =
-    useState(
-      "dashboard",
-    );
+  ] = useState(
+    "dashboard",
+  );
+
 
   const [
     isLoading,
     setIsLoading,
-  ] =
-    useState(true);
+  ] = useState(true);
+
 
   const [
     bookings,
     setBookings,
-  ] =
-    useState([]);
+  ] = useState([]);
+
 
   const [
     customers,
     setCustomers,
-  ] =
-    useState([]);
+  ] = useState([]);
+
 
   const [
     bookingsLoading,
     setBookingsLoading,
-  ] =
-    useState(false);
+  ] = useState(false);
+
 
   const [
     customersLoading,
     setCustomersLoading,
-  ] =
-    useState(false);
+  ] = useState(false);
+
 
   const [
     bookingsError,
     setBookingsError,
-  ] =
-    useState("");
+  ] = useState("");
+
 
   const [
     customersError,
     setCustomersError,
-  ] =
-    useState("");
+  ] = useState("");
+
 
   const [
     selectedBooking,
     setSelectedBooking,
-  ] =
-    useState(null);
+  ] = useState(null);
+
 
   const [
     selectedCustomer,
     setSelectedCustomer,
-  ] =
-    useState(null);
+  ] = useState(null);
+
+
+  /* =======================================================
+     INITIAL SESSION CHECK
+  ======================================================= */
 
   useEffect(() => {
     let isMounted = true;
+
 
     async function initializeDashboard() {
       if (
@@ -240,28 +429,38 @@ function EmployeeDashboard() {
         return;
       }
 
+
       try {
         const data =
           await employeeAuthApi.me();
+
 
         if (!isMounted) {
           return;
         }
 
+
         setEmployee(
           data.employee,
         );
+
 
         updateStoredEmployee(
           data.employee,
         );
 
-        setIsLoading(false);
+
+        setIsLoading(
+          false,
+        );
+
 
         loadBookings();
+
         loadCustomers();
       } catch {
         clearEmployeeSession();
+
 
         navigate(
           "/staff",
@@ -272,12 +471,19 @@ function EmployeeDashboard() {
       }
     }
 
+
     initializeDashboard();
+
 
     return () => {
       isMounted = false;
     };
   }, [navigate]);
+
+
+  /* =======================================================
+     LOCK PAGE WHEN DRAWER IS OPEN
+  ======================================================= */
 
   useEffect(() => {
     const drawerIsOpen =
@@ -286,18 +492,25 @@ function EmployeeDashboard() {
           selectedCustomer,
       );
 
+
     if (!drawerIsOpen) {
       return undefined;
     }
 
-    const previousOverflow =
-      document.body.style.overflow;
 
-    document.body.style.overflow =
+    const previousOverflow =
+      document.body.style
+        .overflow;
+
+
+    document.body.style
+      .overflow =
       "hidden";
 
+
     return () => {
-      document.body.style.overflow =
+      document.body.style
+        .overflow =
         previousOverflow;
     };
   }, [
@@ -305,14 +518,24 @@ function EmployeeDashboard() {
     selectedCustomer,
   ]);
 
+
+  /* =======================================================
+     DATA
+  ======================================================= */
+
   async function loadBookings() {
-    setBookingsLoading(true);
+    setBookingsLoading(
+      true,
+    );
+
     setBookingsError("");
+
 
     try {
       const data =
         await employeeWorkspaceApi
           .bookings();
+
 
       setBookings(
         data.bookings || [],
@@ -322,9 +545,12 @@ function EmployeeDashboard() {
     ) {
       if (
         requestError.status ===
-        401
+          401 ||
+        requestError.status ===
+          403
       ) {
         clearEmployeeSession();
+
 
         navigate(
           "/staff",
@@ -336,23 +562,32 @@ function EmployeeDashboard() {
         return;
       }
 
+
       setBookingsError(
         requestError.message ||
           "Impossible de charger les réservations.",
       );
     } finally {
-      setBookingsLoading(false);
+      setBookingsLoading(
+        false,
+      );
     }
   }
 
+
   async function loadCustomers() {
-    setCustomersLoading(true);
+    setCustomersLoading(
+      true,
+    );
+
     setCustomersError("");
+
 
     try {
       const data =
         await employeeWorkspaceApi
           .customers();
+
 
       setCustomers(
         data.customers || [],
@@ -362,9 +597,12 @@ function EmployeeDashboard() {
     ) {
       if (
         requestError.status ===
-        401
+          401 ||
+        requestError.status ===
+          403
       ) {
         clearEmployeeSession();
+
 
         navigate(
           "/staff",
@@ -376,28 +614,43 @@ function EmployeeDashboard() {
         return;
       }
 
+
       setCustomersError(
         requestError.message ||
           "Impossible de charger les clients.",
       );
     } finally {
-      setCustomersLoading(false);
+      setCustomersLoading(
+        false,
+      );
     }
   }
 
-  const firstName =
-    useMemo(() => {
-      if (
-        !employee?.fullName
-      ) {
-        return "";
-      }
 
-      return employee
-        .fullName
-        .trim()
-        .split(/\s+/)[0];
-    }, [employee]);
+  /* =======================================================
+     NAVIGATION
+  ======================================================= */
+
+  function handleSectionChange(
+    section,
+  ) {
+    setActiveSection(
+      section,
+    );
+
+    setSelectedBooking(
+      null,
+    );
+
+    setSelectedCustomer(
+      null,
+    );
+  }
+
+
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
 
   async function handleLogout() {
     try {
@@ -405,11 +658,12 @@ function EmployeeDashboard() {
         .logout();
     } catch {
       /*
-       * Clear local session even if backend
-       * logout temporarily fails.
+       * Always clear the local
+       * employee session.
        */
     } finally {
       clearEmployeeSession();
+
 
       navigate(
         "/staff",
@@ -419,6 +673,11 @@ function EmployeeDashboard() {
       );
     }
   }
+
+
+  /* =======================================================
+     BOOKING UPDATE
+  ======================================================= */
 
   function handleBookingUpdated(
     updatedBooking,
@@ -436,10 +695,25 @@ function EmployeeDashboard() {
         ),
     );
 
+
     setSelectedBooking(
       updatedBooking,
     );
   }
+
+
+  const currentSectionLabel =
+    NAVIGATION_ITEMS.find(
+      (item) =>
+        item.id ===
+        activeSection,
+    )?.label ||
+    "Espace équipe";
+
+
+  /* =======================================================
+     LOADING
+  ======================================================= */
 
   if (
     isLoading ||
@@ -447,23 +721,41 @@ function EmployeeDashboard() {
   ) {
     return (
       <main className="employee-dashboard-loading">
-        <span className="employee-dashboard-loader" />
+        <span
+          className="employee-dashboard-loader"
+          aria-hidden="true"
+        />
       </main>
     );
   }
 
+
+  /* =======================================================
+     PAGE
+  ======================================================= */
+
   return (
     <main className="employee-dashboard-page">
+
+      {/* ===================================================
+          SIDEBAR
+      ==================================================== */}
+
       <aside className="employee-dashboard-sidebar">
+
         <div className="employee-sidebar-top">
+
           <div className="employee-dashboard-logo">
             <Logo />
           </div>
 
+
           <span className="employee-dashboard-area-label">
             ESPACE ÉQUIPE
           </span>
+
         </div>
+
 
         <nav
           className="employee-dashboard-navigation"
@@ -471,6 +763,7 @@ function EmployeeDashboard() {
         >
           {NAVIGATION_ITEMS.map(
             (item) => (
+
               <button
                 key={
                   item.id
@@ -482,29 +775,31 @@ function EmployeeDashboard() {
                     ? "employee-nav-item employee-nav-item-active"
                     : "employee-nav-item"
                 }
-                onClick={() => {
-                  setActiveSection(
+                onClick={() =>
+                  handleSectionChange(
                     item.id,
-                  );
-
-                  setSelectedBooking(
-                    null,
-                  );
-
-                  setSelectedCustomer(
-                    null,
-                  );
-                }}
-              >
-                {
-                  item.label
+                  )
                 }
+              >
+                <span>
+                  {
+                    item.label
+                  }
+                </span>
+
+                <span
+                  className="employee-nav-indicator"
+                  aria-hidden="true"
+                />
               </button>
+
             ),
           )}
         </nav>
 
+
         <div className="employee-sidebar-footer">
+
           <div className="employee-sidebar-user">
             <span>
               {ROLE_LABELS[
@@ -520,6 +815,7 @@ function EmployeeDashboard() {
             </strong>
           </div>
 
+
           <button
             type="button"
             className="employee-logout-button"
@@ -529,49 +825,100 @@ function EmployeeDashboard() {
           >
             Se déconnecter
           </button>
+
         </div>
+
       </aside>
 
+
+      {/* ===================================================
+          MAIN
+      ==================================================== */}
+
       <section className="employee-dashboard-main">
+
         <header className="employee-dashboard-header">
+
           <span className="employee-dashboard-header-label">
-            STAY · ESPACE EMPLOYÉ
+            STAY ·{" "}
+            {currentSectionLabel.toUpperCase()}
           </span>
 
-          <div className="employee-dashboard-header-user">
-            <span>
-              {
-                employee.fullName
-              }
-            </span>
 
-            <strong>
-              {ROLE_LABELS[
-                employee.role
-              ] ||
-                employee.role}
-            </strong>
+          <div className="employee-dashboard-header-right">
+
+            <div className="employee-dashboard-header-user">
+              <span>
+                {
+                  employee.fullName
+                }
+              </span>
+
+              <strong>
+                {ROLE_LABELS[
+                  employee.role
+                ] ||
+                  employee.role}
+              </strong>
+            </div>
+
+
+            <button
+              type="button"
+              className="employee-header-logout"
+              onClick={
+                handleLogout
+              }
+            >
+              Quitter
+            </button>
+
           </div>
+
         </header>
 
+
         <div className="employee-dashboard-content">
+
           {activeSection ===
             "dashboard" && (
+
             <DashboardOverview
-              firstName={
-                firstName
+              employeeName={
+                employee.fullName
+              }
+              employeeRole={
+                ROLE_LABELS[
+                  employee.role
+                ] ||
+                employee.role
               }
               bookings={
                 bookings
               }
+              isLoading={
+                bookingsLoading
+              }
+              error={
+                bookingsError
+              }
+              onRetry={
+                loadBookings
+              }
               onNavigate={
-                setActiveSection
+                handleSectionChange
+              }
+              onSelectBooking={
+                setSelectedBooking
               }
             />
+
           )}
+
 
           {activeSection ===
             "reservations" && (
+
             <ReservationsSection
               bookings={
                 bookings
@@ -589,10 +936,13 @@ function EmployeeDashboard() {
                 setSelectedBooking
               }
             />
+
           )}
+
 
           {activeSection ===
             "clients" && (
+
             <ClientsSection
               customers={
                 customers
@@ -613,20 +963,32 @@ function EmployeeDashboard() {
                 setSelectedCustomer
               }
             />
+
           )}
+
 
           {activeSection ===
             "profile" && (
+
             <ProfileSection
               employee={
                 employee
               }
             />
+
           )}
+
         </div>
+
       </section>
 
+
+      {/* ===================================================
+          BOOKING DRAWER
+      ==================================================== */}
+
       {selectedBooking && (
+
         <BookingDrawer
           key={
             selectedBooking.id
@@ -643,22 +1005,29 @@ function EmployeeDashboard() {
             handleBookingUpdated
           }
         />
+
       )}
 
+
+      {/* ===================================================
+          CUSTOMER DRAWER
+      ==================================================== */}
+
       {selectedCustomer && (
+
         <CustomerDrawer
           customer={
             selectedCustomer
           }
-          bookings={bookings.filter(
-            (booking) =>
-              Number(
-                booking.userId,
-              ) ===
-              Number(
-                selectedCustomer.id,
-              ),
-          )}
+          bookings={
+            bookings.filter(
+              (booking) =>
+                bookingBelongsToCustomer(
+                  booking,
+                  selectedCustomer.id,
+                ),
+            )
+          }
           onClose={() =>
             setSelectedCustomer(
               null,
@@ -676,128 +1045,423 @@ function EmployeeDashboard() {
             );
           }}
         />
+
       )}
+
     </main>
   );
 }
 
+
+/* =========================================================
+   DASHBOARD OVERVIEW
+========================================================= */
+
+
 function DashboardOverview({
-  firstName,
+  employeeName,
+  employeeRole,
   bookings,
+  isLoading,
+  error,
+  onRetry,
   onNavigate,
+  onSelectBooking,
 }) {
-  const pendingCount =
-    bookings.filter(
-      (booking) =>
-        booking.status ===
-        "pending",
-    ).length;
+  const pendingBookings =
+    useMemo(
+      () =>
+        bookings.filter(
+          (booking) =>
+            booking.status ===
+            "pending",
+        ),
+      [bookings],
+    );
+
+
+  const confirmedCount =
+    useMemo(
+      () =>
+        bookings.filter(
+          (booking) =>
+            booking.status ===
+            "confirmed",
+        ).length,
+      [bookings],
+    );
+
+
+  const dashboardStats = [
+    {
+      label: "À traiter",
+      value:
+        pendingBookings.length,
+      helper:
+        "Demandes en attente",
+    },
+    {
+      label: "Confirmées",
+      value:
+        confirmedCount,
+      helper:
+        "Séjours validés",
+    },
+    {
+      label: "Réservations",
+      value:
+        bookings.length,
+      helper:
+        "Total enregistré",
+    },
+  ];
+
+
+  const priorityBookings =
+    pendingBookings.slice(
+      0,
+      4,
+    );
+
 
   return (
-    <section className="employee-section">
-      <div className="employee-page-heading">
-        <span className="employee-section-eyebrow">
-          TABLEAU DE BORD
-        </span>
+    <section className="employee-section employee-dashboard-overview">
 
-        <h1>
-          Bonjour
-          {firstName
-            ? `, ${firstName}`
-            : ""}
-          .
-        </h1>
+      {/* HEADING */}
 
-        <p>
-          Bienvenue dans votre espace de travail STAY.
-          {pendingCount > 0 &&
-            ` ${pendingCount} réservation${
-              pendingCount > 1
-                ? "s"
-                : ""
-            } en attente.`}
-        </p>
-      </div>
+      <div className="employee-page-heading employee-dashboard-heading">
 
-      <section className="employee-quick-access">
-        <div className="employee-block-heading">
-          <span>
-            ACCÈS RAPIDES
+        <div className="employee-heading-topline">
+
+          <span className="employee-section-eyebrow">
+            TABLEAU DE BORD
           </span>
 
-          <h2>
-            Votre espace de travail
-          </h2>
+
+          <span className="employee-role-chip">
+            {
+              employeeRole
+            }
+          </span>
+
         </div>
 
-        <div className="employee-access-list">
-          <button
-            type="button"
-            onClick={() =>
-              onNavigate(
-                "reservations",
-              )
-            }
-          >
-            <div>
-              <span>01</span>
 
+        <h1>
+          Bonjour,{" "}
+          <span>
+            {
+              employeeName
+            }.
+          </span>
+        </h1>
+
+
+        <p>
+          Voici ce qui demande votre attention aujourd&apos;hui.
+        </p>
+
+      </div>
+
+
+      {/* STATS */}
+
+      <section className="employee-overview-stats">
+
+        {dashboardStats.map(
+          (stat) => (
+
+            <article
+              key={
+                stat.label
+              }
+              className="employee-overview-stat"
+            >
+              <span>
+                {
+                  stat.label
+                }
+              </span>
+
+              <strong>
+                {
+                  stat.value
+                }
+              </strong>
+
+              <p>
+                {
+                  stat.helper
+                }
+              </p>
+            </article>
+
+          ),
+        )}
+
+      </section>
+
+
+      {/* MAIN GRID */}
+
+      <div className="employee-dashboard-work-grid">
+
+        {/* PRIORITIES */}
+
+        <section className="employee-priority-panel">
+
+          <div className="employee-panel-heading">
+
+            <div>
+              <span>
+                PRIORITÉ
+              </span>
+
+              <h2>
+                À traiter maintenant
+              </h2>
+            </div>
+
+
+            <button
+              type="button"
+              onClick={() =>
+                onNavigate(
+                  "reservations",
+                )
+              }
+            >
+              Voir tout
+              <span
+                aria-hidden="true"
+              >
+                ↗
+              </span>
+            </button>
+
+          </div>
+
+
+          {isLoading && (
+
+            <StateMessage
+              message="Chargement des demandes..."
+              compact
+            />
+
+          )}
+
+
+          {!isLoading &&
+            error && (
+
+            <ErrorState
+              message={
+                error
+              }
+              onRetry={
+                onRetry
+              }
+              compact
+            />
+
+          )}
+
+
+          {!isLoading &&
+            !error &&
+            priorityBookings.length ===
+              0 && (
+
+            <div className="employee-priority-empty">
+
+              <span>
+                00
+              </span>
+
+              <div>
+                <strong>
+                  Rien d&apos;urgent.
+                </strong>
+
+                <p>
+                  Toutes les nouvelles demandes ont été traitées.
+                </p>
+              </div>
+
+            </div>
+
+          )}
+
+
+          {!isLoading &&
+            !error &&
+            priorityBookings.length >
+              0 && (
+
+            <div className="employee-priority-list">
+
+              {priorityBookings.map(
+                (
+                  booking,
+                  index,
+                ) => (
+
+                <button
+                  key={
+                    booking.id
+                  }
+                  type="button"
+                  onClick={() =>
+                    onSelectBooking(
+                      booking,
+                    )
+                  }
+                >
+
+                  <span className="employee-priority-index">
+                    {String(
+                      index + 1,
+                    ).padStart(
+                      2,
+                      "0",
+                    )}
+                  </span>
+
+
+                  <div className="employee-priority-main">
+
+                    <span className="employee-priority-reference">
+                      {
+                        booking.reference
+                      }
+                    </span>
+
+
+                    <strong>
+                      {booking.destination
+                        ?.name ||
+                        "Destination"}
+                    </strong>
+
+
+                    <p>
+                      {booking.customer
+                        ?.fullName ||
+                        "Client"}
+                      {" · "}
+                      {formatDate(
+                        booking.checkIn,
+                      )}
+                    </p>
+
+                  </div>
+
+
+                  <span className="employee-priority-arrow">
+                    ↗
+                  </span>
+
+                </button>
+
+              ))}
+
+            </div>
+
+          )}
+
+        </section>
+
+
+        {/* QUICK ACCESS */}
+
+        <aside className="employee-quick-access employee-quick-access-compact">
+
+          <div className="employee-panel-heading employee-quick-heading">
+
+            <div>
+              <span>
+                NAVIGATION
+              </span>
+
+              <h2>
+                Accès rapides
+              </h2>
+            </div>
+
+          </div>
+
+
+          <div className="employee-access-list">
+
+            <button
+              type="button"
+              onClick={() =>
+                onNavigate(
+                  "reservations",
+                )
+              }
+            >
               <strong>
                 Réservations
               </strong>
-            </div>
 
-            <span className="employee-access-arrow">
-              →
-            </span>
-          </button>
+              <span className="employee-access-arrow">
+                →
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              onNavigate(
-                "clients",
-              )
-            }
-          >
-            <div>
-              <span>02</span>
 
+            <button
+              type="button"
+              onClick={() =>
+                onNavigate(
+                  "clients",
+                )
+              }
+            >
               <strong>
                 Clients
               </strong>
-            </div>
 
-            <span className="employee-access-arrow">
-              →
-            </span>
-          </button>
+              <span className="employee-access-arrow">
+                →
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              onNavigate(
-                "profile",
-              )
-            }
-          >
-            <div>
-              <span>03</span>
 
+            <button
+              type="button"
+              onClick={() =>
+                onNavigate(
+                  "profile",
+                )
+              }
+            >
               <strong>
                 Mon profil
               </strong>
-            </div>
 
-            <span className="employee-access-arrow">
-              →
-            </span>
-          </button>
-        </div>
-      </section>
+              <span className="employee-access-arrow">
+                →
+              </span>
+            </button>
+
+          </div>
+
+        </aside>
+
+      </div>
+
     </section>
   );
 }
+
+
+/* =========================================================
+   RESERVATIONS
+========================================================= */
+
 
 function ReservationsSection({
   bookings,
@@ -809,14 +1473,14 @@ function ReservationsSection({
   const [
     search,
     setSearch,
-  ] =
-    useState("");
+  ] = useState("");
+
 
   const [
     statusFilter,
     setStatusFilter,
-  ] =
-    useState("");
+  ] = useState("");
+
 
   const filteredBookings =
     useMemo(() => {
@@ -825,6 +1489,7 @@ function ReservationsSection({
           .trim()
           .toLowerCase();
 
+
       return bookings.filter(
         (booking) => {
           const matchesStatus =
@@ -832,11 +1497,13 @@ function ReservationsSection({
             booking.status ===
               statusFilter;
 
+
           if (
             !matchesStatus
           ) {
             return false;
           }
+
 
           if (
             !normalizedSearch
@@ -844,15 +1511,20 @@ function ReservationsSection({
             return true;
           }
 
+
           const searchableText =
             [
               booking.reference,
+
               booking.customer
                 ?.fullName,
+
               booking.customer
                 ?.email,
+
               booking.customer
                 ?.phone,
+
               booking.destination
                 ?.name,
             ]
@@ -860,9 +1532,11 @@ function ReservationsSection({
               .join(" ")
               .toLowerCase();
 
-          return searchableText.includes(
-            normalizedSearch,
-          );
+
+          return searchableText
+            .includes(
+              normalizedSearch,
+            );
         },
       );
     }, [
@@ -871,24 +1545,31 @@ function ReservationsSection({
       statusFilter,
     ]);
 
+
   return (
     <section className="employee-section">
+
       <div className="employee-page-heading">
+
         <span className="employee-section-eyebrow">
           GESTION
         </span>
+
 
         <h1>
           Réservations
         </h1>
 
+
         <p>
-          Consultez les demandes, ouvrez les détails et
-          mettez leur statut à jour.
+          Consultez les demandes, ouvrez les détails et mettez leur statut à jour.
         </p>
+
       </div>
 
+
       <div className="employee-toolbar">
+
         <input
           type="search"
           value={
@@ -898,12 +1579,12 @@ function ReservationsSection({
             event,
           ) =>
             setSearch(
-              event.target
-                .value,
+              event.target.value,
             )
           }
           placeholder="Rechercher une réservation..."
         />
+
 
         <select
           value={
@@ -913,8 +1594,7 @@ function ReservationsSection({
             event,
           ) =>
             setStatusFilter(
-              event.target
-                .value,
+              event.target.value,
             )
           }
         >
@@ -922,8 +1602,10 @@ function ReservationsSection({
             Tous les statuts
           </option>
 
+
           {BOOKING_STATUSES.map(
             (status) => (
+
               <option
                 key={
                   status.value
@@ -936,114 +1618,184 @@ function ReservationsSection({
                   status.label
                 }
               </option>
+
             ),
           )}
+
         </select>
+
       </div>
 
+
       {isLoading && (
+
         <StateMessage
           message="Chargement des réservations..."
         />
+
       )}
+
 
       {!isLoading &&
         error && (
-          <ErrorState
-            message={
-              error
-            }
-            onRetry={
-              onRetry
-            }
-          />
-        )}
+
+        <ErrorState
+          message={
+            error
+          }
+          onRetry={
+            onRetry
+          }
+        />
+
+      )}
+
 
       {!isLoading &&
         !error &&
         filteredBookings.length ===
           0 && (
-          <StateMessage
-            message="Aucune réservation trouvée."
-          />
-        )}
+
+        <StateMessage
+          message="Aucune réservation trouvée."
+        />
+
+      )}
+
 
       {!isLoading &&
         !error &&
         filteredBookings.length >
           0 && (
-          <div className="employee-table-wrapper">
-            <table className="employee-data-table">
-              <thead>
-                <tr>
-                  <th>Référence</th>
-                  <th>Client</th>
-                  <th>Destination</th>
-                  <th>Arrivée</th>
-                  <th>Statut</th>
-                </tr>
-              </thead>
 
-              <tbody>
-                {filteredBookings.map(
-                  (booking) => (
-                    <tr
-                      key={
-                        booking.id
-                      }
-                      onClick={() =>
+        <div className="employee-table-wrapper">
+
+          <table className="employee-data-table">
+
+            <thead>
+              <tr>
+                <th>
+                  Référence
+                </th>
+
+                <th>
+                  Client
+                </th>
+
+                <th>
+                  Destination
+                </th>
+
+                <th>
+                  Arrivée
+                </th>
+
+                <th>
+                  Statut
+                </th>
+
+                <th
+                  aria-label="Action"
+                />
+              </tr>
+            </thead>
+
+
+            <tbody>
+
+              {filteredBookings.map(
+                (booking) => (
+
+                <tr
+                  key={
+                    booking.id
+                  }
+                  role="button"
+                  tabIndex={
+                    0
+                  }
+                  onClick={() =>
+                    onSelectBooking(
+                      booking,
+                    )
+                  }
+                  onKeyDown={(
+                    event,
+                  ) =>
+                    handleInteractiveRowKeyDown(
+                      event,
+                      () =>
                         onSelectBooking(
                           booking,
-                        )
+                        ),
+                    )
+                  }
+                >
+
+                  <td>
+                    <strong>
+                      {
+                        booking.reference
                       }
-                    >
-                      <td>
-                        <strong>
-                          {
-                            booking.reference
-                          }
-                        </strong>
-                      </td>
+                    </strong>
+                  </td>
 
-                      <td>
-                        {
-                          booking.customer
-                            ?.fullName ||
-                          "—"
-                        }
-                      </td>
 
-                      <td>
-                        {
-                          booking.destination
-                            ?.name ||
-                          "—"
-                        }
-                      </td>
+                  <td>
+                    {booking.customer
+                      ?.fullName ||
+                      "—"}
+                  </td>
 
-                      <td>
-                        {formatDate(
-                          booking.checkIn,
-                        )}
-                      </td>
 
-                      <td>
-                        <StatusBadge
-                          status={
-                            booking.status
-                          }
-                        />
-                      </td>
-                    </tr>
-                  ),
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  <td>
+                    {booking.destination
+                      ?.name ||
+                      "—"}
+                  </td>
+
+
+                  <td>
+                    {formatDate(
+                      booking.checkIn,
+                    )}
+                  </td>
+
+
+                  <td>
+                    <StatusBadge
+                      status={
+                        booking.status
+                      }
+                    />
+                  </td>
+
+
+                  <td className="employee-table-arrow">
+                    ↗
+                  </td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      )}
+
     </section>
   );
 }
+
+
+/* =========================================================
+   CLIENTS
+========================================================= */
+
 
 function ClientsSection({
   customers,
@@ -1056,8 +1808,8 @@ function ClientsSection({
   const [
     search,
     setSearch,
-  ] =
-    useState("");
+  ] = useState("");
+
 
   const filteredCustomers =
     useMemo(() => {
@@ -1066,11 +1818,13 @@ function ClientsSection({
           .trim()
           .toLowerCase();
 
+
       if (
         !normalizedSearch
       ) {
         return customers;
       }
+
 
       return customers.filter(
         (customer) =>
@@ -1091,24 +1845,31 @@ function ClientsSection({
       search,
     ]);
 
+
   return (
     <section className="employee-section">
+
       <div className="employee-page-heading">
+
         <span className="employee-section-eyebrow">
           RELATION CLIENT
         </span>
+
 
         <h1>
           Clients
         </h1>
 
+
         <p>
-          Consultez les comptes clients et leur historique
-          de réservations.
+          Consultez les comptes clients et leur historique de réservations.
         </p>
+
       </div>
 
+
       <div className="employee-toolbar employee-toolbar-single">
+
         <input
           type="search"
           value={
@@ -1118,201 +1879,339 @@ function ClientsSection({
             event,
           ) =>
             setSearch(
-              event.target
-                .value,
+              event.target.value,
             )
           }
           placeholder="Rechercher un client..."
         />
+
       </div>
 
+
       {isLoading && (
+
         <StateMessage
           message="Chargement des clients..."
         />
+
       )}
+
 
       {!isLoading &&
         error && (
-          <ErrorState
-            message={
-              error
-            }
-            onRetry={
-              onRetry
-            }
-          />
-        )}
+
+        <ErrorState
+          message={
+            error
+          }
+          onRetry={
+            onRetry
+          }
+        />
+
+      )}
+
 
       {!isLoading &&
         !error &&
         filteredCustomers.length ===
           0 && (
-          <StateMessage
-            message="Aucun client trouvé."
-          />
-        )}
+
+        <StateMessage
+          message="Aucun client trouvé."
+        />
+
+      )}
+
 
       {!isLoading &&
         !error &&
         filteredCustomers.length >
           0 && (
-          <div className="employee-table-wrapper">
-            <table className="employee-data-table">
-              <thead>
-                <tr>
-                  <th>Client</th>
-                  <th>E-mail</th>
-                  <th>Téléphone</th>
-                  <th>Réservations</th>
-                </tr>
-              </thead>
 
-              <tbody>
-                {filteredCustomers.map(
-                  (customer) => {
-                    const actualBookingCount =
-                      bookings.filter(
-                        (
+        <div className="employee-table-wrapper">
+
+          <table className="employee-data-table">
+
+            <thead>
+              <tr>
+                <th>
+                  Client
+                </th>
+
+                <th>
+                  E-mail
+                </th>
+
+                <th>
+                  Téléphone
+                </th>
+
+                <th>
+                  Réservations
+                </th>
+
+                <th
+                  aria-label="Action"
+                />
+              </tr>
+            </thead>
+
+
+            <tbody>
+
+              {filteredCustomers.map(
+                (customer) => {
+
+                  const actualBookingCount =
+                    bookings.filter(
+                      (booking) =>
+                        bookingBelongsToCustomer(
                           booking,
-                        ) =>
-                          Number(
-                            booking.userId,
-                          ) ===
-                          Number(
-                            customer.id,
-                          ),
-                      ).length;
+                          customer.id,
+                        ),
+                    ).length;
 
-                    return (
-                      <tr
-                        key={
-                          customer.id
-                        }
-                        onClick={() =>
-                          onSelectCustomer(
-                            customer,
-                          )
-                        }
-                      >
-                        <td>
-                          <strong>
-                            {
-                              customer.fullName
-                            }
-                          </strong>
-                        </td>
 
-                        <td>
+                  return (
+
+                    <tr
+                      key={
+                        customer.id
+                      }
+                      role="button"
+                      tabIndex={
+                        0
+                      }
+                      onClick={() =>
+                        onSelectCustomer(
+                          customer,
+                        )
+                      }
+                      onKeyDown={(
+                        event,
+                      ) =>
+                        handleInteractiveRowKeyDown(
+                          event,
+                          () =>
+                            onSelectCustomer(
+                              customer,
+                            ),
+                        )
+                      }
+                    >
+
+                      <td>
+                        <strong>
                           {
-                            customer.email
+                            customer.fullName
                           }
-                        </td>
+                        </strong>
+                      </td>
 
-                        <td>
-                          {customer.phone ||
-                            "—"}
-                        </td>
 
-                        <td>
+                      <td>
+                        {
+                          customer.email
+                        }
+                      </td>
+
+
+                      <td>
+                        {customer.phone ||
+                          "—"}
+                      </td>
+
+
+                      <td>
+                        <span className="employee-booking-count">
                           {
                             actualBookingCount
                           }
-                        </td>
-                      </tr>
-                    );
-                  },
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        </span>
+                      </td>
+
+
+                      <td className="employee-table-arrow">
+                        ↗
+                      </td>
+
+                    </tr>
+
+                  );
+                },
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      )}
+
     </section>
   );
 }
 
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+
 function ProfileSection({
   employee,
 }) {
+  const roleLabel =
+    ROLE_LABELS[
+      employee.role
+    ] ||
+    employee.role;
+
+
+  const isActive =
+    employee.status !==
+    "inactive";
+
+
   return (
     <section className="employee-section">
+
       <div className="employee-page-heading">
+
         <span className="employee-section-eyebrow">
           COMPTE
         </span>
+
 
         <h1>
           Mon profil
         </h1>
 
+
         <p>
-          Les informations associées à votre compte employé
-          STAY.
+          Les informations associées à votre compte employé STAY.
         </p>
+
       </div>
+
 
       <div className="employee-profile-card">
-        <div className="employee-profile-row">
-          <span>
-            Nom complet
-          </span>
 
-          <strong>
+        <div className="employee-profile-hero">
+
+          <div className="employee-profile-monogram">
             {
-              employee.fullName
+              getInitials(
+                employee.fullName,
+              )
             }
-          </strong>
-        </div>
+          </div>
 
-        <div className="employee-profile-row">
-          <span>
-            Adresse e-mail
+
+          <div className="employee-profile-identity">
+
+            <h2>
+              {
+                employee.fullName
+              }
+            </h2>
+
+
+            <p>
+              {
+                roleLabel
+              }
+            </p>
+
+          </div>
+
+
+          <span
+            className={`employee-profile-status ${
+              isActive
+                ? "is-active"
+                : "is-inactive"
+            }`}
+          >
+            <span
+              aria-hidden="true"
+            />
+
+            {isActive
+              ? "Actif"
+              : "Inactif"}
           </span>
 
-          <strong>
-            {
-              employee.email
-            }
-          </strong>
         </div>
 
-        <div className="employee-profile-row">
-          <span>
-            Téléphone
-          </span>
 
-          <strong>
-            {employee.phone ||
-              "—"}
-          </strong>
-        </div>
+        <dl className="employee-profile-details">
 
-        <div className="employee-profile-row">
-          <span>
-            Rôle
-          </span>
+          <div className="employee-profile-row">
+            <dt>
+              Nom complet
+            </dt>
 
-          <strong>
-            {ROLE_LABELS[
-              employee.role
-            ] ||
-              employee.role}
-          </strong>
-        </div>
+            <dd>
+              {
+                employee.fullName
+              }
+            </dd>
+          </div>
 
-        <div className="employee-profile-row">
-          <span>
-            Statut
-          </span>
 
-          <strong>
-            Actif
-          </strong>
-        </div>
+          <div className="employee-profile-row">
+            <dt>
+              Adresse e-mail
+            </dt>
+
+            <dd>
+              {
+                employee.email
+              }
+            </dd>
+          </div>
+
+
+          <div className="employee-profile-row">
+            <dt>
+              Téléphone
+            </dt>
+
+            <dd>
+              {employee.phone ||
+                "—"}
+            </dd>
+          </div>
+
+
+          <div className="employee-profile-row">
+            <dt>
+              Rôle
+            </dt>
+
+            <dd>
+              {
+                roleLabel
+              }
+            </dd>
+          </div>
+
+        </dl>
+
       </div>
+
     </section>
   );
 }
+
+
+/* =========================================================
+   BOOKING DRAWER
+========================================================= */
+
 
 function BookingDrawer({
   booking,
@@ -1322,22 +2221,22 @@ function BookingDrawer({
   const [
     selectedStatus,
     setSelectedStatus,
-  ] =
-    useState(
-      booking.status,
-    );
+  ] = useState(
+    booking.status,
+  );
+
 
   const [
     isSaving,
     setIsSaving,
-  ] =
-    useState(false);
+  ] = useState(false);
+
 
   const [
     error,
     setError,
-  ] =
-    useState("");
+  ] = useState("");
+
 
   async function handleStatusUpdate() {
     if (
@@ -1347,8 +2246,13 @@ function BookingDrawer({
       return;
     }
 
-    setIsSaving(true);
+
+    setIsSaving(
+      true,
+    );
+
     setError("");
+
 
     try {
       const data =
@@ -1357,6 +2261,7 @@ function BookingDrawer({
             booking.id,
             selectedStatus,
           );
+
 
       onBookingUpdated(
         data.booking,
@@ -1369,51 +2274,89 @@ function BookingDrawer({
           "Impossible de modifier le statut.",
       );
     } finally {
-      setIsSaving(false);
+      setIsSaving(
+        false,
+      );
     }
   }
 
+
   return (
     <Drawer
-      title="Détails de la réservation"
+      title="Réservation"
       onClose={
         onClose
       }
     >
-      <div className="employee-drawer-reference">
-        <span>
-          RÉFÉRENCE
-        </span>
 
-        <strong>
-          {
-            booking.reference
-          }
-        </strong>
+      <div className="employee-booking-summary">
 
-        <StatusBadge
-          status={
-            booking.status
-          }
-        />
+        <div className="employee-booking-summary-top">
+
+          <span>
+            {
+              booking.reference
+            }
+          </span>
+
+
+          <StatusBadge
+            status={
+              booking.status
+            }
+          />
+
+        </div>
+
+
+        <h2>
+          {booking.destination
+            ?.name ||
+            "Séjour STAY"}
+        </h2>
+
+
+        <p>
+          {formatDate(
+            booking.checkIn,
+          )}
+          {" → "}
+          {formatDate(
+            booking.checkOut,
+          )}
+        </p>
+
       </div>
 
-      <DrawerSection title="Client">
-        <DetailRow
-          label="Nom"
-          value={
-            booking.customer
-              ?.fullName
-          }
-        />
 
-        <DetailRow
-          label="E-mail"
-          value={
-            booking.customer
-              ?.email
-          }
-        />
+      <DrawerSection title="Client">
+
+        <div className="employee-drawer-client-name">
+
+          <div className="employee-mini-monogram">
+            {getInitials(
+              booking.customer
+                ?.fullName,
+            )}
+          </div>
+
+
+          <div>
+            <strong>
+              {booking.customer
+                ?.fullName ||
+                "Client"}
+            </strong>
+
+            <span>
+              {booking.customer
+                ?.email ||
+                "Aucune adresse e-mail"}
+            </span>
+          </div>
+
+        </div>
+
 
         <DetailRow
           label="Téléphone"
@@ -1422,6 +2365,7 @@ function BookingDrawer({
               ?.phone
           }
         />
+
 
         <ContactActions
           email={
@@ -1433,9 +2377,12 @@ function BookingDrawer({
               ?.phone
           }
         />
+
       </DrawerSection>
 
+
       <DrawerSection title="Séjour">
+
         <DetailRow
           label="Destination"
           value={
@@ -1443,6 +2390,7 @@ function BookingDrawer({
               ?.name
           }
         />
+
 
         <DetailRow
           label="Localisation"
@@ -1452,12 +2400,14 @@ function BookingDrawer({
           }
         />
 
+
         <DetailRow
           label="Arrivée"
           value={formatDate(
             booking.checkIn,
           )}
         />
+
 
         <DetailRow
           label="Départ"
@@ -1466,19 +2416,14 @@ function BookingDrawer({
           )}
         />
 
-        <DetailRow
-          label="Adultes"
-          value={
-            booking.adults
-          }
-        />
 
         <DetailRow
-          label="Enfants"
-          value={
-            booking.children
-          }
+          label="Voyageurs"
+          value={formatTravelers(
+            booking,
+          )}
         />
+
 
         <DetailRow
           label="Estimation"
@@ -1487,59 +2432,79 @@ function BookingDrawer({
           )}
         />
 
+
         <DetailRow
           label="Contact"
-          value={
-            booking.contactMethod
-          }
+          value={formatContactMethod(
+            booking.contactMethod,
+          )}
         />
+
       </DrawerSection>
 
+
       {booking.specialRequest && (
-        <DrawerSection
-          title="Demande spéciale"
-        >
+
+        <DrawerSection title="Demande spéciale">
+
           <p className="employee-special-request">
             {
               booking.specialRequest
             }
           </p>
+
         </DrawerSection>
+
       )}
 
+
       <DrawerSection title="Modifier le statut">
+
         <div className="employee-status-options">
+
           {BOOKING_STATUSES.map(
             (status) => (
-              <button
-                key={
-                  status.value
-                }
-                type="button"
-                className={
-                  selectedStatus ===
-                  status.value
-                    ? "employee-status-option employee-status-option-active"
-                    : "employee-status-option"
-                }
-                onClick={() =>
-                  setSelectedStatus(
-                    status.value,
-                  )
-                }
-              >
-                {selectedStatus ===
-                  status.value && (
-                  <span>✓</span>
-                )}
 
-                {
-                  status.label
-                }
-              </button>
-            ),
-          )}
+            <button
+              key={
+                status.value
+              }
+              type="button"
+              className={
+                selectedStatus ===
+                status.value
+                  ? "employee-status-option employee-status-option-active"
+                  : "employee-status-option"
+              }
+              onClick={() =>
+                setSelectedStatus(
+                  status.value,
+                )
+              }
+            >
+
+              {selectedStatus ===
+                status.value && (
+
+                <span
+                  aria-hidden="true"
+                >
+                  ✓
+                </span>
+
+              )}
+
+
+              {
+                status.label
+              }
+
+            </button>
+
+          ))}
+
         </div>
+
 
         <button
           type="button"
@@ -1561,15 +2526,28 @@ function BookingDrawer({
               : "Enregistrer le changement"}
         </button>
 
+
         {error && (
+
           <p className="employee-inline-error">
-            {error}
+            {
+              error
+            }
           </p>
+
         )}
+
       </DrawerSection>
+
     </Drawer>
   );
 }
+
+
+/* =========================================================
+   CUSTOMER DRAWER
+========================================================= */
+
 
 function CustomerDrawer({
   customer,
@@ -1584,25 +2562,47 @@ function CustomerDrawer({
         onClose
       }
     >
-      <div className="employee-drawer-reference">
-        <span>
-          CLIENT
-        </span>
 
-        <strong>
+      <div className="employee-customer-summary">
+
+        <div className="employee-customer-monogram">
+          {getInitials(
+            customer.fullName,
+          )}
+        </div>
+
+
+        <h2>
           {
             customer.fullName
           }
-        </strong>
+        </h2>
+
+
+        <p>
+          Client STAY
+        </p>
+
+
+        <span className="employee-customer-booking-total">
+          {bookings.length} réservation
+          {bookings.length !== 1
+            ? "s"
+            : ""}
+        </span>
+
       </div>
 
+
       <DrawerSection title="Informations">
+
         <DetailRow
           label="E-mail"
           value={
             customer.email
           }
         />
+
 
         <DetailRow
           label="Téléphone"
@@ -1611,12 +2611,14 @@ function CustomerDrawer({
           }
         />
 
+
         <DetailRow
-          label="Inscription"
+          label="Inscrit depuis"
           value={formatDate(
             customer.createdAt,
           )}
         />
+
 
         <ContactActions
           email={
@@ -1626,71 +2628,113 @@ function CustomerDrawer({
             customer.phone
           }
         />
+
       </DrawerSection>
+
 
       <DrawerSection
         title={`Historique des réservations (${bookings.length})`}
       >
+
         {bookings.length ===
         0 ? (
+
           <p className="employee-drawer-empty">
             Aucune réservation enregistrée pour ce client.
           </p>
+
         ) : (
+
           <div className="employee-customer-bookings">
+
             {bookings.map(
               (booking) => (
-                <button
-                  key={
-                    booking.id
-                  }
-                  type="button"
-                  onClick={() =>
-                    onSelectBooking(
-                      booking,
-                    )
-                  }
-                >
-                  <div>
-                    <strong>
-                      {
-                        booking.reference
-                      }
-                    </strong>
 
-                    <span>
-                      {booking.destination
-                        ?.name ||
-                        "Destination"}
-                    </span>
-                  </div>
+              <button
+                key={
+                  booking.id
+                }
+                type="button"
+                onClick={() =>
+                  onSelectBooking(
+                    booking,
+                  )
+                }
+              >
+
+                <div className="employee-customer-booking-main">
+
+                  <strong>
+                    {booking.destination
+                      ?.name ||
+                      "Destination"}
+                  </strong>
+
+
+                  <span>
+                    {
+                      booking.reference
+                    }
+                  </span>
+
+
+                  <small>
+                    {formatDate(
+                      booking.checkIn,
+                    )}
+                    {" → "}
+                    {formatDate(
+                      booking.checkOut,
+                    )}
+                  </small>
+
+                </div>
+
+
+                <div className="employee-customer-booking-side">
 
                   <StatusBadge
                     status={
                       booking.status
                     }
                   />
-                </button>
-              ),
-            )}
+
+
+                  <span className="employee-customer-booking-arrow">
+                    ↗
+                  </span>
+
+                </div>
+
+              </button>
+
+            ))}
+
           </div>
+
         )}
+
       </DrawerSection>
+
     </Drawer>
   );
 }
+
+
+/* =========================================================
+   CONTACT ACTIONS
+========================================================= */
+
 
 function ContactActions({
   email,
   phone,
 }) {
   const normalizedPhone =
-    phone
-      ? String(phone).replace(
-          /\D/g,
-          "",
-        )
-      : "";
+    normalizePhoneForWhatsApp(
+      phone,
+    );
+
 
   if (
     !email &&
@@ -1699,25 +2743,34 @@ function ContactActions({
     return null;
   }
 
+
   return (
     <div className="employee-contact-actions">
+
       {email && (
+
         <a
           href={`mailto:${email}`}
         >
           E-mail
         </a>
+
       )}
 
+
       {phone && (
+
         <a
           href={`tel:${phone}`}
         >
           Appeler
         </a>
+
       )}
 
+
       {normalizedPhone && (
+
         <a
           href={`https://wa.me/${normalizedPhone}`}
           target="_blank"
@@ -1725,19 +2778,58 @@ function ContactActions({
         >
           WhatsApp
         </a>
+
       )}
+
     </div>
   );
 }
+
+
+/* =========================================================
+   DRAWER
+========================================================= */
+
 
 function Drawer({
   title,
   onClose,
   children,
 }) {
+  useEffect(() => {
+
+    function handleEscape(
+      event,
+    ) {
+      if (
+        event.key ===
+        "Escape"
+      ) {
+        onClose();
+      }
+    }
+
+
+    window.addEventListener(
+      "keydown",
+      handleEscape,
+    );
+
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleEscape,
+      );
+    };
+
+  }, [onClose]);
+
+
   return (
     <div
       className="employee-drawer-backdrop"
+      role="presentation"
       onMouseDown={(
         event,
       ) => {
@@ -1749,16 +2841,24 @@ function Drawer({
         }
       }}
     >
+
       <aside
         className="employee-drawer"
+        role="dialog"
+        aria-modal="true"
         aria-label={
           title
         }
       >
+
         <header className="employee-drawer-header">
+
           <span>
-            {title}
+            {
+              title
+            }
           </span>
+
 
           <button
             type="button"
@@ -1769,15 +2869,27 @@ function Drawer({
           >
             ×
           </button>
+
         </header>
 
+
         <div className="employee-drawer-content">
-          {children}
+          {
+            children
+          }
         </div>
+
       </aside>
+
     </div>
   );
 }
+
+
+/* =========================================================
+   DRAWER HELPERS
+========================================================= */
+
 
 function DrawerSection({
   title,
@@ -1785,14 +2897,22 @@ function DrawerSection({
 }) {
   return (
     <section className="employee-drawer-section">
+
       <h3>
-        {title}
+        {
+          title
+        }
       </h3>
 
-      {children}
+
+      {
+        children
+      }
+
     </section>
   );
 }
+
 
 function DetailRow({
   label,
@@ -1800,17 +2920,28 @@ function DetailRow({
 }) {
   return (
     <div className="employee-detail-row">
+
       <span>
-        {label}
+        {
+          label
+        }
       </span>
+
 
       <strong>
         {value ??
           "—"}
       </strong>
+
     </div>
   );
 }
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
 
 function StatusBadge({
   status,
@@ -1827,25 +2958,52 @@ function StatusBadge({
   );
 }
 
+
+/* =========================================================
+   STATES
+========================================================= */
+
+
 function StateMessage({
   message,
+  compact = false,
 }) {
   return (
-    <div className="employee-state-message">
-      {message}
+    <div
+      className={
+        compact
+          ? "employee-state-message employee-state-message-compact"
+          : "employee-state-message"
+      }
+    >
+      {
+        message
+      }
     </div>
   );
 }
 
+
 function ErrorState({
   message,
   onRetry,
+  compact = false,
 }) {
   return (
-    <div className="employee-state-message employee-state-error">
+    <div
+      className={
+        compact
+          ? "employee-state-message employee-state-error employee-state-message-compact"
+          : "employee-state-message employee-state-error"
+      }
+    >
+
       <p>
-        {message}
+        {
+          message
+        }
       </p>
+
 
       <button
         type="button"
@@ -1855,8 +3013,10 @@ function ErrorState({
       >
         Réessayer
       </button>
+
     </div>
   );
 }
+
 
 export default EmployeeDashboard;

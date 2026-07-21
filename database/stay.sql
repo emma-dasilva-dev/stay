@@ -215,7 +215,7 @@ VALUES
   ),
 
   (
-    'Le Village d’Hélène',
+    'Le Village d''Hélène',
     'village-helene',
     'Lac Toho',
     'Une adresse paisible au bord du lac Toho, où la nature, le calme et les grands espaces invitent à une escapade loin de l’agitation.',
@@ -261,18 +261,6 @@ VALUES
     FALSE,
     TRUE
   ),
-
-  (
-    'Queen''s Hotel',
-    'queens-hotel',
-    'Porto-Novo',
-    'Un pied-à-terre confortable à Porto-Novo, idéal pour découvrir la capitale, son patrimoine et son atmosphère singulière.',
-    'Escapade urbaine',
-    16000,
-    '/uploads/destinations/queens-hotel/main.jpg',
-    FALSE,
-    TRUE
-  )
 
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),

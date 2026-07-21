@@ -66,7 +66,7 @@ function About() {
       <section className="about-hero">
         <div className="about-hero-content">
           <div className="about-hero-copy">
-            <span className="about-eyebrow">01 / STAY</span>
+           
 
             <div className="about-title-mask">
               <h1 className="about-title">
