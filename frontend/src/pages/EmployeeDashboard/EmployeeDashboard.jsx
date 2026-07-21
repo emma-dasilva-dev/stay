@@ -8,7 +8,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 
-import Logo from "../../components/Logo/logo";
+import Logo from "../../components/Logo/Logo";
 
 import {
   clearEmployeeSession,
